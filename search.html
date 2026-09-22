@@ -512,6 +512,11 @@
     var cat = m[1].toLowerCase();
     var groupEl = document.querySelector('[data-cat-group="' + cat + '"]');
     if (!groupEl) return;
+    // 固定ヘッダー(.site-header・position:sticky)の高さ分、見出しや駅名入力欄が隠れないよう
+    // 実測値をscroll-margin-topに反映する(CSS固定値ではなく実測にするのは、幅でヘッダー高さが変わるため)。
+    var hdr = document.querySelector('.site-header');
+    var offset = (hdr ? hdr.offsetHeight : 0) + 16; // 視覚フォーカスの outline-offset 4px を含めて余白
+    groupEl.style.scrollMarginTop = offset + 'px';
     if (groupEl.scrollIntoView) groupEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
     groupEl.classList.add('is-focused');
     setTimeout(function () { groupEl.classList.remove('is-focused'); }, 2400);
