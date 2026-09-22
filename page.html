@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta name="robots" content="noindex, nofollow"> <!-- staging only -->
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title id="page-title">お知らせ｜THAI SPOT TOKYO</title>
+<meta name="description" id="page-description" content="THAI SPOT TOKYOからのお知らせ・特集ページです。">
+<link rel="canonical" href="https://thaispot-tokyo.com/page.html">
+<!-- SNS共有カード(OGP/Twitter)。画像はサイト共通 assets/img/ogp.jpg・URLは絶対指定(改修6-(b)) -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="THAI SPOT TOKYO">
+<meta property="og:locale" content="ja_JP">
+<meta property="og:title" content="お知らせ｜THAI SPOT TOKYO">
+<meta property="og:description" content="THAI SPOT TOKYOからのお知らせ・特集ページです。">
+<meta property="og:url" content="https://thaispot-tokyo.com/page.html">
+<meta property="og:image" content="https://thaispot-tokyo.com/assets/img/ogp.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="assets/css/style.css?v=20260826a">
+<!-- GA4(改修6-(f))。config.js の STAGING_MODE:true のときは ga.js が何もしない。
+     defer なので本文末尾の config.js が評価された後に実行される(読み込み順の規約どおり)。 -->
+<script defer src="assets/js/ga.js?v=20260922a"></script>
+</head>
+<body>
+
+<div id="site-header"></div>
+
+<main id="main-content">
+  <div class="container">
+
+    <!-- シート設定に問題がある可能性があるときだけ表示(実装設計書13-H-12。search.html等と同一の慣例) -->
+    <div id="warnings-banner-mount"></div>
+
+    <!-- Pages行から構築する自由ページ本体(?id=PAGE_ID)。データ確定まで非表示(下の状態表示と排他制御) -->
+    <div class="article" id="page-article" hidden>
+      <h1 class="article__title" id="article-title"></h1>
+      <div class="article__image" id="article-image" hidden></div>
+      <p class="article__body" id="article-body"></p>
+    </div>
+
+    <!-- id不在/該当行なし/非公開ページ: 「ページが見つかりませんでした」+ホーム・検索への導線 -->
+    <section id="page-notfound" class="state-panel state-panel--error" hidden>
+      <h1 class="state-panel__title" id="notfound-title">ページが見つかりませんでした</h1>
+      <p class="state-panel__desc" id="notfound-desc"></p>
+      <div class="state-panel__actions">
+        <a class="btn btn--primary" id="notfound-home" href="index.html">ホームへ戻る</a>
+        <a class="btn btn--outline" id="notfound-search" href="search.html">お店を探す</a>
+      </div>
+    </section>
+
+    <!-- 通信失敗・非200時(要件2-3: 白画面禁止) -->
+    <div id="page-error" hidden></div>
+
+  </div>
+</main>
+
+<div id="site-footer"></div>
+
+<!-- Pages行の内容はシート由来の動的データであり、texts-defaultに代替本文を持たない(要件2-2の対象外=
+     固定ページの中身そのものなので「組み込みデフォルト」という概念がない)。そのためデータ取得に失敗した
+     場合はstore.html同様に「データを読み込めませんでした」表示にする(白画面禁止・要件2-3)。
+     全ての動的テキストはTS.util.el()のtextContent/TS.util.setText()経由。画像は必ずTS.util.imageUrl()を
+     明示的に呼ぶ(設計書6章・10-1規約)。 -->
+<script src="assets/js/config.js?v=20260922a"></script>
+<script src="assets/js/texts-default.js?v=20260922a"></script>
+<script src="assets/js/util.js?v=20260922a"></script>
+<script src="assets/js/data.js?v=20260826a"></script>
+<script src="assets/js/render.js?v=20260826a"></script>
+<script>
+(function () {
+  'use strict';
+
+  var U = TS.util;
+
+  TS.render.chrome('page'); // ヘッダー/フッター骨格を先に描画(体感速度優先)。pageIdはnav項目に無いのでどれも選択状態にならない。
+
+  var pageId = U.qs('id'); // URLパラメータidはtrim済み(TS.util.qsが実施)
+
+  TS.data.load().then(function (db) {
+    TS.render.footerNotices(db);
+    insertWarningsBanner(db);
+
+    var page = findPage(db, pageId);
+    if (!page) { showNotFound(db); return; }
+
+    renderPage(page, db);
+  }).catch(function (err) {
+    // 要件2-3: 通信失敗・非200時は「データを読み込めませんでした」表示(白画面禁止)
+    var errEl = document.getElementById('page-error');
+    errEl.hidden = false;
+    TS.data.loadError(errEl, err);
+  });
+
+  // シート設定に問題がある可能性があるときだけ小バナーを先頭に挿入(実装設計書13-H-12)
+  function insertWarningsBanner(db) {
+    if (typeof TS.render.warningsBanner !== 'function') return;
+    var banner = TS.render.warningsBanner(db);
+    if (!banner) return;
+    var mount = document.getElementById('warnings-banner-mount');
+    if (mount) mount.appendChild(banner);
+  }
+
+  // findPage: id不在/未指定/非公開ページはすべてnull(=見つからなかった扱い)。
+  // 突合はTS.util.norm両辺適用(トリム+全角/半角正規化・要件2-4)。
+  function findPage(db, id) {
+    if (!id) return null;
+    var target = U.norm(id);
+    var hit = (db.pages || []).filter(function (p) { return U.norm(p.id) === target; })[0];
+    if (!hit || !hit.published) return null;
+    return hit;
+  }
+
+  function showNotFound(db) {
+    var t = (db && typeof db.texts === 'function') ? db.texts : function (key) { return (TS.textsDefault && TS.textsDefault[key]) || ''; };
+    U.setText('notfound-title', t('page_notfound_title'));
+    U.setText('notfound-desc', t('page_notfound_body'));
+    U.setText('notfound-home', t('notfound_home_button'));
+    U.setText('notfound-search', t('notfound_search_button'));
+    var panel = document.getElementById('page-notfound');
+    if (panel) panel.hidden = false;
+  }
+
+  function renderPage(page, db) {
+    // title/descriptionはPage自身のタイトルで動的更新(SEO・要件9章)
+    document.title = (page.title || db.texts('meta_title_page')) + '｜THAI SPOT TOKYO';
+    var descMeta = document.getElementById('page-description');
+    if (descMeta) {
+      descMeta.setAttribute('content', page.body ? page.body.slice(0, 120) : db.texts('meta_desc_page'));
+    }
+
+    U.setText('article-title', page.title || '');
+    U.setText('article-body', page.body || '');
+
+    // 画像(任意): 必ずTS.util.imageUrl()経由。値が無ければ要素ごと非表示(要件6章)。
+    var imageMount = document.getElementById('article-image');
+    imageMount.textContent = '';
+    if (page.imageUrl) {
+      var res = U.imageUrl(page.imageUrl);
+      var img = U.el('img', { loading: 'lazy', alt: page.title || '' });
+      img.src = res.src; // 明示的に検証済みの値のみ直接代入(設計書10-1)
+      imageMount.appendChild(img);
+      imageMount.hidden = false;
+    } else {
+      imageMount.hidden = true;
+    }
+
+    var article = document.getElementById('page-article');
+    article.hidden = false;
+  }
+})();
+</script>
+</body>
+</html>

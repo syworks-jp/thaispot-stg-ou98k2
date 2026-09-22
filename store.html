@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta name="robots" content="noindex, nofollow"> <!-- staging only -->
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title id="page-title">店舗詳細｜THAI SPOT TOKYO</title>
+<meta name="description" id="page-description" content="店舗の紹介・アクセス・メニュー・特徴・地図をまとめて表示します。">
+<link rel="canonical" href="https://thaispot-tokyo.com/store.html">
+<!-- SNS共有カード(OGP/Twitter)。画像はサイト共通 assets/img/ogp.jpg・URLは絶対指定(改修6-(b)) -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="THAI SPOT TOKYO">
+<meta property="og:locale" content="ja_JP">
+<meta property="og:title" content="店舗詳細｜THAI SPOT TOKYO">
+<meta property="og:description" content="店舗の紹介・アクセス・メニュー・特徴・地図をまとめて表示します。">
+<meta property="og:url" content="https://thaispot-tokyo.com/store.html">
+<meta property="og:image" content="https://thaispot-tokyo.com/assets/img/ogp.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="assets/css/style.css?v=20260826a">
+<!-- GA4(改修6-(f))。config.js の STAGING_MODE:true のときは ga.js が何もしない。
+     defer なので本文末尾の config.js が評価された後に実行される(読み込み順の規約どおり)。 -->
+<script defer src="assets/js/ga.js?v=20260922a"></script>
+</head>
+<body>
+
+<div id="site-header"></div>
+
+<main id="main-content">
+  <div class="container">
+
+    <!-- シート設定に問題がある可能性があるときだけ表示(実装設計書13-I-10)。TS.render.warningsBannerは
+         担当Hが並行実装中のため、呼び出し側は typeof ガード付きで独立動作させる(未実装でも本ページは壊れない)。 -->
+    <div id="warnings-banner-mount"></div>
+
+    <!-- 店舗詳細本体(要件5章の表示順どおりJSで構築)。データ確定まで非表示(下の状態表示と排他制御) -->
+    <article id="store-detail" hidden></article>
+
+    <!-- id不在/未指定/非公開店舗ID時: 「お店が見つかりませんでした」+ホーム・検索への導線 -->
+    <section id="store-notfound" class="state-panel state-panel--error" hidden>
+      <h1 class="state-panel__title">お店が見つかりませんでした</h1>
+      <p class="state-panel__desc">URLが正しくないか、非公開の店舗の可能性があります。<br>下記からお探しください。</p>
+      <div class="state-panel__actions">
+        <a class="btn btn--primary" href="index.html">ホームへ戻る</a>
+        <a class="btn btn--outline" href="search.html">お店を探す</a>
+      </div>
+    </section>
+
+    <!-- 通信失敗・非200時(要件2-3: 白画面禁止) -->
+    <div id="store-error" hidden></div>
+
+    <!-- 広告枠(要件1章/5章: store_bottom)。該当広告なしなら何も描画されない(TS.render.adSlotがnullを返す) -->
+    <div id="store-ad-slot"></div>
+
+  </div>
+</main>
+
+<div id="site-footer"></div>
+
+<!-- 要件5章の表示順どおりJSで構築する。全ての動的テキストはTS.util.el()のtextContent経由、
+     href/srcは常にTS.util.safeUrl()/imageUrl()を明示的に呼ぶか、自前組み立て文字列を直接代入する
+     (実装設計書3章セキュリティ非交渉・10-1規約)。情報確認日(Verified_Date)は設計書10-5裁定により表示しない。 -->
+<script src="assets/js/config.js?v=20260922a"></script>
+<script src="assets/js/texts-default.js?v=20260922a"></script>
+<script src="assets/js/util.js?v=20260922a"></script>
+<script src="assets/js/data.js?v=20260826a"></script>
+<script src="assets/js/render.js?v=20260826a"></script>
+<script src="assets/js/log.js?v=20260826a"></script>
+<!-- 店舗ごとのtitle/description/canonical/JSON-LDを組み立てる(改修6-(c)(d)・2026-09-22) -->
+<script src="assets/js/seo.js?v=20260922a"></script>
+<script>
+(function () {
+  'use strict';
+
+  var U = TS.util;
+
+  TS.render.chrome('store'); // ヘッダー/フッター骨格を先に描画(体感速度優先)。フッターの「お知らせ・特集」はdb確定後に追い充填。
+
+  var storeId = U.qs('id'); // URLパラメータidはtrim済み(TS.util.qsが実施)
+
+  TS.data.load().then(function (db) {
+    TS.render.footerNotices(db);
+    insertWarningsBanner(db);
+
+    var store = findStore(db, storeId);
+    if (!store) { showNotFound(); return; }
+
+    renderStore(store, db);
+
+    var ad = TS.render.adSlot('store_bottom', db);
+    if (ad) document.getElementById('store-ad-slot').appendChild(ad);
+  }).catch(function (err) {
+    // 要件2-3: 通信失敗・非200時は「データを読み込めませんでした」表示(白画面禁止)
+    var errEl = document.getElementById('store-error');
+    errEl.hidden = false;
+    TS.data.loadError(errEl, err);
+  });
+
+  // シート設定に問題がある可能性がある時だけ警告バナーを先頭に挿入する(実装設計書13-I-10)。
+  // TS.render.warningsBannerは担当Hが並行実装中の関数のため、typeofガードを必須にして独立動作させる
+  // (未実装の間は何もしない=本ページの他機能に影響しない)。
+  function insertWarningsBanner(db) {
+    if (typeof TS.render.warningsBanner !== 'function') return;
+    var banner = TS.render.warningsBanner(db);
+    if (!banner) return;
+    var mount = document.getElementById('warnings-banner-mount');
+    if (mount) mount.appendChild(banner);
+  }
+
+  // findStore: id不在/未指定/非公開店舗はすべて null(=見つからなかった扱い・要件5章の趣旨)。
+  // 突合はTS.util.norm両辺適用(トリム+全角/半角正規化・要件2-4)。
+  function findStore(db, id) {
+    if (!id) return null;
+    var target = U.norm(id);
+    var hit = (db.stores || []).filter(function (s) { return U.norm(s.id) === target; })[0];
+    if (!hit || !hit.published) return null;
+    return hit;
+  }
+
+  function showNotFound() {
+    var panel = document.getElementById('store-notfound');
+    if (panel) panel.hidden = false;
+  }
+
+  // ---- 表示順(要件5章): 店舗名→画像→紹介文→エリア/最寄駅/徒歩→タイプ・ThaiSELECT→Maps→
+  //   食べられるもの→おすすめシーン→特徴→店舗情報→公式/Instagram→動画→TikTok→注意書き+修正連絡 ----
+  function renderStore(store, db) {
+    // title/description/canonical/JSON-LDを店舗ごとの値に差し替える(改修6-(c)(d)・2026-09-22)。
+    // 組み立ては assets/js/seo.js（純粋関数＋DOM反映）に集約し、ここからは1回呼ぶだけにする。
+    // データが取れなかった場合はこの関数自体が呼ばれないため、HTMLに書いてある共通文言のまま残る。
+    if (TS.seo && typeof TS.seo.applyStore === 'function') {
+      TS.seo.applyStore(store);
+    } else {
+      // 旧経路（seo.js 読み込み失敗時の保険）: 店舗名だけでも反映する
+      document.title = store.name + '｜THAI SPOT TOKYO';
+      var descMeta = document.getElementById('page-description');
+      if (descMeta) {
+        descMeta.setAttribute('content', store.description ? store.description.slice(0, 120) : db.texts('meta_desc_store'));
+      }
+    }
+
+    var root = document.getElementById('store-detail');
+    root.textContent = '';
+
+    root.appendChild(U.el('h1', { class: 'article__title' }, [store.name || '']));
+
+    var gallery = buildGallery(store);
+    if (gallery) root.appendChild(gallery);
+
+    if (store.description) {
+      root.appendChild(U.el('p', { class: 'pre-wrap' }, [store.description]));
+    }
+
+    // 申し送り(実装設計書13-I-7・render.js担当外のため未修正): render.js の metaLine(buildMetaText) は
+    // store.walkMinutes を検証なしでそのまま「徒歩X分」に埋め込んでいる。ここ(store.html側の店舗情報再掲)は
+    // TS.util.normalizeWalkMinutes()で非数値混入を弾いているが、metaLine側にも同じ検証の適用が必要。
+    var metaLine = TS.render.metaLine(store);
+    if (metaLine) root.appendChild(U.el('p', { class: 'store-card__meta' }, [metaLine]));
+
+    var badges = buildBadges(store, db);
+    if (badges) root.appendChild(badges);
+
+    var mapBtn = buildMapButton(store, db);
+    if (mapBtn) root.appendChild(mapBtn);
+
+    addSection(root, db.texts('store_menu_heading'), buildMenuChips(store, db));
+    addSection(root, db.texts('store_scene_heading'), buildTagList(relatedNames(db.storeScenes, db.scenes, store.id)));
+    addSection(root, db.texts('store_feature_heading'), buildTagList(relatedNames(db.storeFeatures, db.features, store.id)));
+    addSection(root, db.texts('store_info_heading'), buildInfoPanel(store, db));
+
+    var extLinks = buildExternalLinks(store, db);
+    if (extLinks) root.appendChild(extLinks);
+
+    addSection(root, db.texts('store_video_heading'), buildVideoButton(store, db));
+
+    var tiktok = buildTiktokLink(store, db);
+    if (tiktok) root.appendChild(tiktok);
+
+    root.appendChild(buildNoticeSection(store, db));
+
+    root.hidden = false;
+  }
+
+  // 見出し+要素があるときだけセクションを追加する共通ヘルパー(「該当のみ表示」の実装統一)
+  function addSection(root, headingText, contentEl) {
+    if (!contentEl) return;
+    if (headingText) root.appendChild(U.el('h2', { class: 'section-title' }, [headingText]));
+    root.appendChild(contentEl);
+  }
+
+  // 画像: Exterior_Image(外観)+Food_Image(料理)の2枚構成。片方のみ/ゼロでも崩れない(要件6章)。
+  // 必ずTS.util.imageUrl()経由。変換失敗時もプレースホルダーで表示を維持する(imageUrlのok:false時のsrc)。
+  function buildGallery(store) {
+    var items = [
+      { raw: store.exteriorImage, alt: (store.name || '') + '（外観）' },
+      { raw: store.foodImage, alt: (store.name || '') + '（料理）' }
+    ].filter(function (it) { return it.raw; });
+    if (!items.length) return null;
+
+    // 1枚/2枚どちらでも崩れないよう、列数はCSS側のモディファイアクラスで切り替える(設計書11章TODO8)
+    var galleryCls = 'store-detail__gallery' + (items.length > 1 ? '' : ' store-detail__gallery--single');
+    var wrap = U.el('div', { class: galleryCls });
+
+    items.forEach(function (it) {
+      var box = U.el('div', { class: 'store-card__media' }); // 4:3の画像枠(既存クラスを流用)
+      var res = U.imageUrl(it.raw); // 必ずimageUrl経由(要件6章)。ok:falseでもsrcにプレースホルダーが入っている
+      var img = U.el('img', { class: 'store-card__img', loading: 'lazy', alt: it.alt });
+      img.src = res.src; // 明示的に検証済みの値のみ直接代入(設計書10-1)
+      box.appendChild(img);
+      wrap.appendChild(box);
+    });
+    return wrap;
+  }
+
+  // メタ行(📍エリア・最寄駅 徒歩X分)・Thai SELECT判定はrender.jsの公開APIに一本化済み
+  // (設計書11章TODO7: TS.render.metaLine / TS.render.hasThaiSelect。旧個別実装は削除)。
+
+  // タイプ(Restaurant/Cafe)バッジ + Thai SELECT認定バッジ(該当時のみ)。render.jsのstoreCard実装と同じ判定ロジック
+  // (TS.render.hasThaiSelectを直接呼ぶことで判定ロジックを一本化・設計書11章TODO7)。
+  function buildBadges(store, db) {
+    var wrap = U.el('div', { class: 'store-card__badges' });
+    var type = (store.storeType || '').trim();
+    if (type) {
+      var typeCls = /cafe/i.test(type) ? 'badge--type-cafe' : 'badge--type-restaurant';
+      wrap.appendChild(U.el('span', { class: 'badge ' + typeCls }, [type]));
+    }
+    if (TS.render.hasThaiSelect(store, db)) {
+      wrap.appendChild(U.el('span', { class: 'badge badge--thaiselect' }, ['Thai SELECT']));
+    }
+    return wrap.childNodes.length ? wrap : null;
+  }
+
+  // Google Maps: Google_Map_URL列優先(safeUrlで検証)。無ければ住所検索URLを自分で組んで直接代入
+  // (設計書10-1: 自前組み立て文字列は直接代入可。住所はencodeURIComponentで必ずエスケープする)。
+  function buildMapButton(store, db) {
+    var href = store.mapUrl ? U.safeUrl(store.mapUrl) : null;
+    if (!href && store.address) {
+      href = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(store.address);
+    }
+    if (!href) return null;
+    var a = U.el('a', { class: 'btn btn--primary store-detail__map-btn' }, [db.texts('store_maps_button')]);
+    a.href = href;
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    return a;
+  }
+
+  // storeIdに紐づくマスタ名一覧(公開のみ・重複排除)。中間シート(links)→マスタ(master)をID正規化して突合。
+  function relatedNames(links, master, storeId) {
+    var target = U.norm(storeId);
+    var ids = (links || [])
+      .filter(function (lk) { return U.norm(lk.storeId) === target; })
+      .map(function (lk) { return U.norm(lk.otherId); });
+    var seen = {};
+    var names = [];
+    (master || []).forEach(function (m) {
+      if (!m.published) return;
+      if (ids.indexOf(U.norm(m.id)) === -1) return;
+      var key = U.norm(m.name);
+      if (seen[key]) return;
+      seen[key] = true;
+      names.push(m.name);
+    });
+    return names;
+  }
+
+  // 「このお店で食べられるもの」: その店の提供メニューのみ・チップ表示・タップでsearch.html?dish=へ(要件5章)。
+  function buildMenuChips(store, db) {
+    var names = relatedNames(db.storeMenus, db.menus, store.id);
+    if (!names.length) return null;
+    return TS.render.chips(
+      names.map(function (n) { return { value: n, label: n }; }),
+      { hrefFor: function (v) { return 'search.html?dish=' + encodeURIComponent(v); } }
+    );
+  }
+
+  // 「こんな時におすすめ」「お店の特徴」: 該当のみ・非インタラクティブなタグ表示(要件5章はタップ遷移を求めていないため
+  // 検索チップ<button>/<a>ではなく静的な<span class="tag">で表示する)。
+  function buildTagList(names) {
+    if (!names || !names.length) return null;
+    var wrap = U.el('div', { class: 'chips' });
+    names.forEach(function (n) { wrap.appendChild(U.el('span', { class: 'tag' }, [n])); });
+    return wrap;
+  }
+
+  // 店舗情報: 住所 + 「ランチ営業○/ディナー営業○」形式(要件2-1)。該当フラグがtrueの行のみ表示。
+  // 仕様書PDF 3-4どおり住所/最寄駅/徒歩目安/ランチ/ディナーを再掲する(設計書11章TODO6の裁定)。
+  // 最寄駅/徒歩はページ上部のメタ行(TS.render.metaLine)と重複するが、「店舗情報」欄としての一覧性のため
+  // 仕様書どおりここにも表示する。徒歩の書式はmetaLineと同じ「徒歩X分」表記(既存実装のトーンを踏襲)。
+  function buildInfoPanel(store, db) {
+    var lines = [];
+    if (store.address) lines.push(store.address);
+    if (store.station) lines.push(store.station);
+    // Walk_Minutesは先方の自由入力欄のため非数値混入があり得る。半角化して数値のときのみ表示し、
+    // それ以外は徒歩表示自体を省略する(誤った分数を断定表示しない・実装設計書13-I-7)。
+    var walkMin = U.normalizeWalkMinutes(store.walkMinutes);
+    if (walkMin) lines.push('徒歩' + walkMin + '分');
+    if (store.lunch) lines.push(db.texts('store_lunch_on'));
+    if (store.dinner) lines.push(db.texts('store_dinner_on'));
+    if (!lines.length) return null;
+    var box = U.el('div', { class: 'panel' });
+    lines.forEach(function (line) { box.appendChild(U.el('p', {}, [line])); });
+    return box;
+  }
+
+  // 公式サイト/Instagram(登録時のみ・safeUrl通過時のみ)
+  function buildExternalLinks(store, db) {
+    var wrap = U.el('div', { class: 'store-detail__links' });
+
+    var website = store.websiteUrl ? U.safeUrl(store.websiteUrl) : null;
+    if (website) {
+      var a1 = U.el('a', { class: 'btn btn--outline' }, [db.texts('store_official_button')]);
+      a1.href = website; a1.target = '_blank'; a1.rel = 'noopener noreferrer';
+      wrap.appendChild(a1);
+    }
+    var insta = store.instagramUrl ? U.safeUrl(store.instagramUrl) : null;
+    if (insta) {
+      var a2 = U.el('a', { class: 'btn btn--outline' }, [db.texts('store_instagram_button')]);
+      a2.href = insta; a2.target = '_blank'; a2.rel = 'noopener noreferrer';
+      wrap.appendChild(a2);
+    }
+    return wrap.childNodes.length ? wrap : null;
+  }
+
+  // 「このお店を動画で見る」見出し+[動画を見る→](Store_Video列がありsafeUrl通過時のみ・要件5章)
+  function buildVideoButton(store, db) {
+    var href = store.videoUrl ? U.safeUrl(store.videoUrl) : null;
+    if (!href) return null;
+    var a = U.el('a', { class: 'btn btn--outline' }, [db.texts('store_video_button')]);
+    a.href = href; a.target = '_blank'; a.rel = 'noopener noreferrer';
+    return a;
+  }
+
+  // 「Soaの紹介動画を見る」(TikTok_URL列がありsafeUrl通過時のみ・8/20先方指定文言・要件2-1)
+  function buildTiktokLink(store, db) {
+    var href = store.tiktokUrl ? U.safeUrl(store.tiktokUrl) : null;
+    if (!href) return null;
+    var wrap = U.el('div', { class: 'store-detail__tiktok' });
+    var a = U.el('a', { class: 'btn btn--outline' }, [db.texts('store_tiktok_button')]);
+    a.href = href; a.target = '_blank'; a.rel = 'noopener noreferrer';
+    wrap.appendChild(a);
+    return wrap;
+  }
+
+  // 注意書き + [掲載情報の修正を連絡する→](contact.html?store=店舗名へ・店舗名はencodeURIComponent)。
+  // 情報確認日(Verified_Date)は設計書10-5裁定により表示しない(注意書きのみ表示)。
+  function buildNoticeSection(store, db) {
+    var wrap = U.el('div', { class: 'panel store-detail__notice' });
+    var note = db.texts('store_verified_note');
+    if (note) wrap.appendChild(U.el('p', { class: 'pre-wrap' }, [note]));
+    var a = U.el('a', { class: 'btn btn--secondary store-detail__notice-btn' }, [db.texts('store_report_button')]);
+    a.href = 'contact.html?store=' + encodeURIComponent(store.name || '');
+    wrap.appendChild(a);
+    return wrap;
+  }
+})();
+</script>
+</body>
+</html>

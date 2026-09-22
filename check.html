@@ -1,0 +1,655 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>診断ページ | THAI SPOT TOKYO</title>
+<!-- 要件0-2章/2-3章: 隠し診断ページ(納品物)。どこからもリンクしない。検索エンジンにも載せない(noindex)。 -->
+<link rel="stylesheet" href="assets/css/style.css?v=20260826a">
+<!-- 実装設計書10-3: check.html専用の診断テーブルclassは未定義のため、ここに局所追加する(style.cssは編集しない) -->
+<style>
+  .check-intro {
+    padding: var(--space-5) 0 var(--space-2);
+  }
+  .check-intro__title {
+    font-family: var(--font-heading);
+    font-size: 20px;
+    color: var(--color-primary-deep);
+    margin-bottom: var(--space-2);
+  }
+  .check-intro__desc {
+    font-size: 13px;
+    color: var(--color-muted-2);
+    line-height: 1.8;
+  }
+  .check-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-3);
+    margin-top: var(--space-4);
+  }
+  .check-summary {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--color-heading);
+  }
+  .check-summary__ok { color: #1b7a5a; }
+  .check-summary__warn { color: #7a5b12; }
+  .check-summary__ng { color: var(--color-danger); }
+
+  .check-section {
+    padding: var(--space-5) 0;
+    border-top: 1px solid var(--color-border);
+  }
+  .check-section__title {
+    font-family: var(--font-heading);
+    font-size: 15px;
+    color: var(--color-heading);
+    margin-bottom: var(--space-3);
+  }
+  .check-section__note {
+    font-size: 12px;
+    color: var(--color-muted);
+    margin: -6px 0 var(--space-3);
+  }
+
+  .check-table-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-m);
+    background: var(--color-card);
+  }
+  .check-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  .check-cell {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--color-border);
+    text-align: left;
+    vertical-align: top;
+  }
+  .check-table tr:last-child .check-cell {
+    border-bottom: none;
+  }
+  .check-cell--status {
+    width: 40px;
+    text-align: center;
+    font-weight: 700;
+    font-size: 15px;
+  }
+  .check-cell--label {
+    width: 32%;
+    font-weight: 700;
+    color: var(--color-heading);
+    word-break: break-word;
+  }
+  .check-cell--hint {
+    color: var(--color-muted-2);
+    line-height: 1.7;
+    word-break: break-word;
+  }
+  .check-badge--ok { color: #1b7a5a; }
+  .check-badge--warn { color: #7a5b12; }
+  .check-badge--ng { color: var(--color-danger); }
+
+  .check-loading {
+    padding: 10px 12px;
+    font-size: 12.5px;
+    color: var(--color-muted);
+  }
+
+  @media (min-width: 768px) {
+    .check-cell--status { width: 48px; }
+    .check-cell--label { width: 26%; }
+  }
+</style>
+</head>
+<body>
+
+<div id="site-header"></div>
+
+<main id="main-content">
+  <div class="container">
+
+    <section class="check-intro">
+      <h1 class="check-intro__title">診断ページ（check.html）</h1>
+      <p class="check-intro__desc">
+        このページはサイトの裏側の状態を自動でチェックする「隠しページ」です。<br>
+        表示がおかしいときは、まずこのページを開いて、どこに問題があるか確認してください。<br>
+        すべて自動で実行されます。結果は○（問題なし）・△（注意）・×（要対応）で表示します。
+      </p>
+      <div class="check-toolbar">
+        <button id="check-rerun" class="btn btn--primary" type="button">再診断する</button>
+        <button id="check-nocache" class="btn btn--outline" type="button">キャッシュを破棄して再取得</button>
+        <span id="check-summary" class="check-summary" aria-live="polite">診断を実行しています…</span>
+      </div>
+    </section>
+
+    <section class="check-section" id="check-sheets">
+      <h2 class="check-section__title">1. 各シートへの接続</h2>
+      <p class="check-section__note">Stores/Menus/Store_Menus/Scenes/Store_Scenes/Features/Store_Features（基本7シート）と、Site_Texts/Pages/Ads（追加シート・無くても動作します）に、それぞれ個別に接続確認します。</p>
+      <div class="check-table-wrap">
+        <table class="check-table"><tbody id="check-sheets-body"><tr><td class="check-loading" colspan="3">確認中…</td></tr></tbody></table>
+      </div>
+    </section>
+
+    <section class="check-section" id="check-columns">
+      <h2 class="check-section__title">2. 必須タブ・必須列名の検証</h2>
+      <p class="check-section__note">シートの中身を読み込んだ結果、必要な列が見つからない場合にここへ表示されます。</p>
+      <div class="check-table-wrap">
+        <table class="check-table"><tbody id="check-columns-body"><tr><td class="check-loading" colspan="3">確認中…</td></tr></tbody></table>
+      </div>
+    </section>
+
+    <section class="check-section" id="check-gas">
+      <h2 class="check-section__title">3. GAS（お問い合わせ・検索データ記録）との通信</h2>
+      <div class="check-table-wrap">
+        <table class="check-table"><tbody id="check-gas-body"><tr><td class="check-loading" colspan="3">確認中…</td></tr></tbody></table>
+      </div>
+    </section>
+
+    <section class="check-section" id="check-image">
+      <h2 class="check-section__title">4. 画像の読み込みテスト</h2>
+      <p class="check-section__note">公開中の店舗の中から、画像が登録されている最初の1件を実際に読み込んでみます。</p>
+      <div class="check-table-wrap">
+        <table class="check-table"><tbody id="check-image-body"><tr><td class="check-loading" colspan="3">確認中…</td></tr></tbody></table>
+      </div>
+    </section>
+
+    <section class="check-section" id="check-chips">
+      <h2 class="check-section__title">5. おすすめチップとマスタ名の整合</h2>
+      <p class="check-section__note">ホーム画面「おすすめの条件」に設定した文言（Site_Textsの recommend_chips）が、料理・エリア・駅・シーン・特徴・タイプのいずれかの実データ名と一致しているか確認します。一致しないラベルは、ホーム画面に表示されません。</p>
+      <div class="check-table-wrap">
+        <table class="check-table"><tbody id="check-chips-body"><tr><td class="check-loading" colspan="3">確認中…</td></tr></tbody></table>
+      </div>
+    </section>
+
+    <section class="check-section" id="check-iddup">
+      <h2 class="check-section__title">6. IDの重複</h2>
+      <p class="check-section__note">Store_ID・Menu_ID等が重複している場合、最初の行が優先され、それ以降の行は無視されます（周知のためここに一覧します）。</p>
+      <div class="check-table-wrap">
+        <table class="check-table"><tbody id="check-iddup-body"><tr><td class="check-loading" colspan="3">確認中…</td></tr></tbody></table>
+      </div>
+    </section>
+
+    <section class="check-section" id="check-scheme">
+      <h2 class="check-section__title">7. 不正なURL・危険なリンクの検出</h2>
+      <p class="check-section__note">店舗情報・広告のURL欄に http(s) 以外の危険な値が入っていないか確認します（見つかった場合、該当のリンクや画像はサイト側で自動的に非表示になります）。</p>
+      <div class="check-table-wrap">
+        <table class="check-table"><tbody id="check-scheme-body"><tr><td class="check-loading" colspan="3">確認中…</td></tr></tbody></table>
+      </div>
+    </section>
+
+    <section class="check-section" id="check-cache">
+      <h2 class="check-section__title">8. キャッシュの状態</h2>
+      <p class="check-section__note">データは最大10分間ブラウザに保存されます（読み込み速度のため）。シートを更新してもすぐに反映されない場合は、下の「キャッシュを破棄して再取得」を押してください。<br>なお、このページの診断（1〜7）は常に最新データを取得しています（診断実行時に最新データを取得済み）。下記はブラウザに保存されている直近のキャッシュの情報です。</p>
+      <div class="check-table-wrap">
+        <table class="check-table"><tbody id="check-cache-body"><tr><td class="check-loading" colspan="3">確認中…</td></tr></tbody></table>
+      </div>
+    </section>
+
+  </div>
+</main>
+
+<div id="site-footer"></div>
+
+<script src="assets/js/config.js?v=20260922a"></script>
+<script src="assets/js/texts-default.js?v=20260922a"></script>
+<script src="assets/js/util.js?v=20260922a"></script>
+<script src="assets/js/data.js?v=20260826a"></script>
+<script src="assets/js/render.js?v=20260826a"></script>
+<script>
+(function () {
+  'use strict';
+
+  // ==========================================================================
+  // check.html — 隠し診断ページ(要件0-2章/2-3章・実装設計書6章)
+  // 方針: シート到達性(1)は data.js のキャッシュを迂回した個別fetchで生応答を判定する。
+  //       それ以外(2,4,5,6,7)は TS.data.load() の結果(db / db.warnings)を1回使って判定する。
+  //       全診断は自動実行 + [再診断]ボタンで手動再実行できる(要件0-2章)。
+  //       セキュリティ非交渉(設計書3章): 診断結果に含むシート由来の文字列も含め、
+  //       描画は必ず TS.util.el()/textContent 経由。innerHTMLは一切使わない。
+  // ==========================================================================
+
+  var REQUIRED_SHEETS = ['Stores', 'Menus', 'Store_Menus', 'Scenes', 'Store_Scenes', 'Features', 'Store_Features'];
+  var OPTIONAL_SHEETS = ['Site_Texts', 'Pages', 'Ads'];
+
+  // 各シートの「これが無ければ別シートへの取り違え」とみなす最低限の列名(実ヘッダー名・設計書5章/10-5)。
+  // なぜ必要か: Googleのgvizは sheet= に存在しないタブ名を渡しても200 OKで既定タブ(先頭シート等)へ
+  // 静かにフォールバックし、明示的なエラーを返さない(実装時に実測で確認)。そのためHTTPステータスだけでは
+  // 「タブが無い」を判定できず、返ってきた列名が期待する列と一致するかで推定する。
+  var EXPECT_HEADERS = {
+    Stores: ['Store_ID', 'Store_Name'],
+    Menus: ['Menu_ID', 'Menu_Name'],
+    Store_Menus: ['Store_ID', 'Menu_ID'],
+    Scenes: ['Scene_ID'],
+    Store_Scenes: ['Store_ID', 'Scene_ID'],
+    Features: ['Feature_ID'],
+    Store_Features: ['Store_ID', 'Feature_ID'],
+    Site_Texts: ['Key', 'Text'],
+    Pages: ['Page_ID', 'Title'],
+    Ads: ['Ad_ID', 'Link_URL'],
+  };
+
+  // ---- 小さな描画ヘルパー ----
+
+  function statusSymbol(status) {
+    return status === 'ok' ? '○' : (status === 'warn' ? '△' : '×');
+  }
+
+  function makeRow(status, label, hint) {
+    var badge = TS.util.el('span', { class: 'check-badge check-badge--' + status }, [statusSymbol(status)]);
+    var tdStatus = TS.util.el('td', { class: 'check-cell check-cell--status' }, [badge]);
+    var tdLabel = TS.util.el('td', { class: 'check-cell check-cell--label' }, [label]);
+    var tdHint = TS.util.el('td', { class: 'check-cell check-cell--hint' }, [hint || '']);
+    return TS.util.el('tr', {}, [tdStatus, tdLabel, tdHint]);
+  }
+
+  // rows: [{status:'ok'|'warn'|'ng', label:string, hint:string}]
+  function renderRows(tbodyId, rows) {
+    var tbody = document.getElementById(tbodyId);
+    if (!tbody) return;
+    while (tbody.firstChild) tbody.removeChild(tbody.firstChild);
+    if (!rows || !rows.length) {
+      tbody.appendChild(makeRow('warn', '(結果なし)', '診断結果を取得できませんでした'));
+      return;
+    }
+    rows.forEach(function (r) { tbody.appendChild(makeRow(r.status, r.label, r.hint)); });
+  }
+
+  var allRows = []; // サマリ集計用(全項目の行を積む)
+
+  function record(tbodyId, rows) {
+    renderRows(tbodyId, rows);
+    allRows = allRows.concat(rows || []);
+  }
+
+  function renderSummary() {
+    var el = document.getElementById('check-summary');
+    if (!el) return;
+    var ok = 0, warn = 0, ng = 0;
+    allRows.forEach(function (r) {
+      if (r.status === 'ok') ok++; else if (r.status === 'warn') warn++; else ng++;
+    });
+    while (el.firstChild) el.removeChild(el.firstChild);
+    el.appendChild(TS.util.el('span', { class: 'check-summary__ok' }, ['○' + ok + ' ']));
+    el.appendChild(TS.util.el('span', { class: 'check-summary__warn' }, ['△' + warn + ' ']));
+    el.appendChild(TS.util.el('span', { class: 'check-summary__ng' }, ['×' + ng]));
+  }
+
+  // ---- 日時表示(JST。要件: 課長運用に合わせ常にJSTで) ----
+  function formatJst(date) {
+    try {
+      return new Intl.DateTimeFormat('ja-JP', {
+        timeZone: 'Asia/Tokyo', year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
+      }).format(date) + ' JST';
+    } catch (e) {
+      return date.toISOString();
+    }
+  }
+
+  // ==========================================================================
+  // 1. 各シート到達性(個別fetch・data.jsのキャッシュを迂回)
+  // ==========================================================================
+  function gvizUrlDirect(sheet) {
+    var id = (TS.config && TS.config.SPREADSHEET_ID) || '';
+    // 接続先ベースはdata.jsのgvizUrlと同じ規則で解決する（config駆動・診断対象と実配信のズレ防止）
+    var base = (TS.config && TS.config.GVIZ_BASE_URL) || 'https://docs.google.com';
+    return base + '/spreadsheets/d/' + encodeURIComponent(id) +
+      '/gviz/tq?tqx=out:json&sheet=' + encodeURIComponent(sheet) + '&_cb=' + Date.now() + '_' + Math.random().toString(36).slice(2);
+  }
+
+  function checkOneSheet(sheet) {
+    var url = gvizUrlDirect(sheet);
+    var isOptional = OPTIONAL_SHEETS.indexOf(sheet) !== -1;
+    return fetch(url, { cache: 'no-store', credentials: 'omit' }).then(function (res) {
+      var ct = res.headers.get('content-type') || '';
+      if (res.status === 401 || res.status === 403 || /text\/html/i.test(ct)) {
+        return { status: 'ng', label: sheet, hint: 'スプレッドシートの共有設定が「リンクを知っている全員(閲覧可)」か確認してください' };
+      }
+      if (!res.ok) {
+        return { status: 'ng', label: sheet, hint: 'HTTPエラー(' + res.status + ')が発生しました。時間をおいて再度お試しください' };
+      }
+      return res.text().then(function (text) {
+        var table;
+        try {
+          table = TS.data._internal.gvizTable(TS.data._internal.parseGviz(text));
+        } catch (parseErr) {
+          return { status: 'ng', label: sheet, hint: '応答を解析できませんでした。スプレッドシートID・共有設定をご確認ください' };
+        }
+        var expect = EXPECT_HEADERS[sheet] || [];
+        var matched = expect.every(function (h) { return h in table.index; });
+        if (matched) {
+          return { status: 'ok', label: sheet, hint: '接続できました（' + table.rows.length + '行）' };
+        }
+        if (isOptional) {
+          return { status: 'warn', label: sheet, hint: '未作成、または1行目の列名が想定と異なります（既定文言で動作中）' };
+        }
+        return { status: 'ng', label: sheet, hint: 'タブが見つからないか、想定する列名（' + expect.join('・') + '）と一致しません。タブ名・1行目の列名をご確認ください' };
+      });
+    }).catch(function () {
+      return { status: 'ng', label: sheet, hint: '読み込みに失敗しました。ネットワーク状況をご確認のうえ再度お試しください' };
+    });
+  }
+
+  function runSheetReachability() {
+    var sheets = REQUIRED_SHEETS.concat(OPTIONAL_SHEETS);
+    return Promise.all(sheets.map(checkOneSheet)).then(function (rows) {
+      record('check-sheets-body', rows);
+      return rows;
+    });
+  }
+
+  // ==========================================================================
+  // 2〜7: TS.data.load() の結果を使う診断群
+  // ==========================================================================
+
+  // ---- 2. 必須タブ・必須列名の検証(data.jsのwarningsから該当分を抽出・翻訳) ----
+  function checkRequiredColumns(db, dbError) {
+    if (dbError) {
+      return [{ status: 'ng', label: 'データ読み込み', hint: 'データを読み込めなかったため検証できませんでした（まず上の「1. 各シートへの接続」をご確認ください）' }];
+    }
+    var warnings = (db && db.warnings) || [];
+    var rows = [];
+    warnings.forEach(function (w) {
+      var mMissingSheet = /^必須シート「(.+)」を取得できませんでした$/.exec(w);
+      if (mMissingSheet) {
+        rows.push({ status: 'ng', label: mMissingSheet[1] + 'シート', hint: 'シートを取得できませんでした（タブ自体が存在しないか、共有設定の問題です）' });
+        return;
+      }
+      // 必須列欠損(実装設計書13-I-4でdata.js側が日本語ラベルを直接埋め込むようになったため、そのまま使う)
+      var mMissingCol = /^(.+)シートに必須列が見つかりません: (.+)$/.exec(w);
+      if (mMissingCol) {
+        var sheetName = mMissingCol[1];
+        var label = mMissingCol[2];
+        rows.push({ status: 'ng', label: sheetName + 'シート', hint: sheetName + 'シートの列『' + label + '』が見つかりません' });
+        return;
+      }
+      // 非必須のURL/画像列欠損(実装設計書13-I-4で新設。機能への影響は限定的なのでwarn扱い)
+      var mMissingOptCol = /^(.+)シートの列『(.+)』が見つかりません（(.+)）$/.exec(w);
+      if (mMissingOptCol) {
+        rows.push({ status: 'warn', label: mMissingOptCol[1] + 'シート', hint: mMissingOptCol[1] + 'シートの列『' + mMissingOptCol[2] + '』が見つかりません（' + mMissingOptCol[3] + '）' });
+      }
+    });
+    if (!rows.length) {
+      return [{ status: 'ok', label: '必須タブ・列名', hint: '欠損している必須列は見つかりませんでした' }];
+    }
+    return rows;
+  }
+
+  // ---- 3. GAS疎通 ----
+  function checkGas() {
+    var url = (TS.config && TS.config.GAS_URL) || '';
+    if (!url) {
+      return Promise.resolve([{ status: 'warn', label: 'GAS_URL', hint: '未設定です（統合工程で設定予定。設定されるまでお問い合わせ送信・検索データ記録は動作しません）' }]);
+    }
+    var safe = TS.util.safeUrl(url);
+    if (!safe) {
+      return Promise.resolve([{ status: 'ng', label: 'GAS_URL', hint: 'URLの形式が不正です（https:// で始まるURLを設定してください）' }]);
+    }
+    return fetch(safe, { method: 'GET', cache: 'no-store' }).then(function (res) {
+      if (!res.ok) {
+        return [{ status: 'ng', label: 'GAS Webアプリ', hint: 'HTTPエラー(' + res.status + ')。GASの再デプロイ状態をご確認ください' }];
+      }
+      return res.json().catch(function () { return null; }).then(function (json) {
+        if (json && json.ok === true) {
+          return [{ status: 'ok', label: 'GAS Webアプリ', hint: '応答を確認できました（' + (json.service || 'OK') + '）' }];
+        }
+        return [{ status: 'ng', label: 'GAS Webアプリ', hint: '応答はありましたが、想定した形式（ok:true）ではありませんでした' }];
+      });
+    }).catch(function () {
+      return [{ status: 'ng', label: 'GAS Webアプリ', hint: '通信に失敗しました。GASのデプロイURL・公開設定（アクセスできるユーザー=全員）をご確認ください' }];
+    });
+  }
+
+  // ---- 4. 画像1枚読込テスト ----
+  function findFirstStoreImage(db) {
+    var stores = (db.stores || []).filter(function (s) { return s.published; });
+    for (var i = 0; i < stores.length; i++) {
+      var raw = stores[i].exteriorImage || stores[i].foodImage;
+      if (raw) return { store: stores[i], raw: raw };
+    }
+    return null;
+  }
+
+  function checkImageLoad(db, dbError) {
+    if (dbError) {
+      return Promise.resolve([{ status: 'ng', label: 'データ読み込み', hint: 'データを読み込めなかったため検証できませんでした' }]);
+    }
+    var found = findFirstStoreImage(db);
+    if (!found) {
+      return Promise.resolve([{ status: 'warn', label: '画像テスト', hint: '画像登録なし（公開中の店舗に画像URLが1件も設定されていません）' }]);
+    }
+    var conv = TS.util.imageUrl(found.raw);
+    if (!conv.ok) {
+      return Promise.resolve([{ status: 'ng', label: found.store.name || '(無名の店舗)', hint: '画像URLを解釈できませんでした（Google Driveの共有リンク形式・通常URLのいずれにも一致しません）' }]);
+    }
+    return new Promise(function (resolve) {
+      var done = false;
+      var img = new Image();
+      var timer = setTimeout(function () {
+        if (done) return;
+        done = true;
+        resolve([{ status: 'ng', label: found.store.name || '(無名の店舗)', hint: '画像の読み込みがタイムアウトしました。Driveの共有設定（リンクを知っている全員が閲覧可）をご確認ください' }]);
+      }, 8000);
+      img.onload = function () {
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+        resolve([{ status: 'ok', label: found.store.name || '(無名の店舗)', hint: '画像を読み込めました' }]);
+      };
+      img.onerror = function () {
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+        resolve([{ status: 'ng', label: found.store.name || '(無名の店舗)', hint: '画像の読み込みに失敗しました。Driveの共有設定（リンクを知っている全員が閲覧可）をご確認ください' }]);
+      };
+      img.src = conv.src;
+    });
+  }
+
+  // ---- 5. おすすめチップとマスタ名の整合(index.htmlのresolveChipParamKeyと同一ロジック・要件2-4) ----
+  function resolveChipParamKey(label, db) {
+    var norm = TS.util.norm(label);
+    if ((db.menus || []).some(function (m) { return TS.util.norm(m.name) === norm; })) return 'dish';
+    if ((db.scenes || []).some(function (s) { return TS.util.norm(s.name) === norm; })) return 'scene';
+    if ((db.features || []).some(function (f) { return TS.util.norm(f.name) === norm; })) return 'feature';
+    if ((db.stores || []).some(function (s) { return TS.util.norm(s.area) === norm; })) return 'area';
+    if ((db.stores || []).some(function (s) { return TS.util.norm(s.station) === norm; })) return 'station';
+    if ((db.stores || []).some(function (s) { return TS.util.norm(s.storeType) === norm; })) return 'type';
+    return null;
+  }
+
+  function checkChipConsistency(db, dbError) {
+    if (dbError) {
+      return [{ status: 'ng', label: 'データ読み込み', hint: 'データを読み込めなかったため検証できませんでした' }];
+    }
+    var raw = db.texts('recommend_chips');
+    var labels = (raw ? raw.split(',') : (TS.config.RECOMMEND_CHIPS || []))
+      .map(function (s) { return (s || '').trim(); })
+      .filter(Boolean);
+    if (!labels.length) {
+      return [{ status: 'warn', label: 'recommend_chips', hint: 'おすすめチップは未設定です（ホーム画面「おすすめの条件」は非表示になります）' }];
+    }
+    var rows = labels.map(function (label) {
+      var key = resolveChipParamKey(label, db);
+      return key
+        ? { status: 'ok', label: label, hint: '料理・エリア・駅・シーン・特徴・タイプのいずれかのマスタ名と一致しました' }
+        : { status: 'ng', label: label, hint: 'どのマスタ名にも一致しません（ホーム画面に表示されません。誤字や、名称変更後の更新漏れがないかご確認ください）' };
+    });
+    return rows;
+  }
+
+  // ---- 6. ID重複警告 ----
+  function checkIdDuplicates(db, dbError) {
+    if (dbError) {
+      return [{ status: 'ng', label: 'データ読み込み', hint: 'データを読み込めなかったため検証できませんでした' }];
+    }
+    var dups = (db.warnings || []).filter(function (w) { return /重複/.test(w); });
+    if (!dups.length) {
+      return [{ status: 'ok', label: 'ID重複', hint: '重複しているIDは見つかりませんでした' }];
+    }
+    return dups.map(function (w) {
+      return { status: 'warn', label: 'ID重複', hint: w + '（最初の行が採用され、以降の行は無視されています）' };
+    });
+  }
+
+  // ---- 7. 不正スキーム検出(要件2-4・格納型XSSの多層防御) ----
+  var STORE_URL_FIELDS = [
+    ['mapUrl', 'Google_Map_URL'], ['websiteUrl', 'Official_Website'],
+    ['instagramUrl', 'Instagram_URL'], ['tiktokUrl', 'TikTok_URL'], ['videoUrl', 'Store_Video'],
+  ];
+  var STORE_IMAGE_FIELDS = [['exteriorImage', 'Exterior_Image'], ['foodImage', 'Food_Image']];
+
+  function checkUnsafeSchemes(db, dbError) {
+    if (dbError) {
+      return [{ status: 'ng', label: 'データ読み込み', hint: 'データを読み込めなかったため検証できませんでした' }];
+    }
+    var rows = [];
+    (db.stores || []).forEach(function (s) {
+      var name = s.name || '(無名の店舗)';
+      STORE_URL_FIELDS.forEach(function (pair) {
+        var raw = s[pair[0]];
+        if (!raw) return;
+        if (!TS.util.safeUrl(raw)) {
+          rows.push({ status: 'ng', label: name + ' の ' + pair[1], hint: '許可されない形式のためリンクは表示されません（http/https以外の値、または不正な値が含まれています）' });
+        }
+      });
+      STORE_IMAGE_FIELDS.forEach(function (pair) {
+        var raw = s[pair[0]];
+        if (!raw) return;
+        var conv = TS.util.imageUrl(raw);
+        if (!conv.ok) {
+          rows.push({ status: 'ng', label: name + ' の ' + pair[1], hint: '許可されない形式のため画像はプレースホルダー表示になります' });
+        }
+      });
+    });
+    (db.ads || []).forEach(function (ad) {
+      var adLabel = '広告(' + (ad.id || '不明') + ')';
+      if (ad.imageUrl) {
+        var conv = TS.util.imageUrl(ad.imageUrl);
+        if (!conv.ok) rows.push({ status: 'ng', label: adLabel + ' の Image_URL', hint: '許可されない形式のため画像は表示されません' });
+      }
+      if (ad.linkUrl && !TS.util.safeUrl(ad.linkUrl)) {
+        rows.push({ status: 'ng', label: adLabel + ' の Link_URL', hint: '許可されない形式のためリンクは表示されません' });
+      }
+    });
+    if (!rows.length) {
+      return [{ status: 'ok', label: '不正なURL', hint: '検出されませんでした' }];
+    }
+    return rows;
+  }
+
+  // ---- 8. キャッシュ状態 ----
+  // 注意: 'ts_db_cache_v1' は data.js 内の CACHE_KEY と同一の値(data.jsは非公開のため文字列で直接参照している)。
+  // data.js側でキー名を変更した場合はこちらも合わせる必要がある(他ファイルへの申し送り事項)。
+  var CACHE_KEY = 'ts_db_cache_v1';
+  var CACHE_MINUTES_FALLBACK = 10;
+
+  function checkCacheStatus() {
+    try {
+      var raw = sessionStorage.getItem(CACHE_KEY);
+      if (!raw) {
+        return [{ status: 'warn', label: 'キャッシュ', hint: 'まだキャッシュはありません（このページの読み込みで新規に取得されます）' }];
+      }
+      var obj = JSON.parse(raw);
+      if (!obj || !obj._t) {
+        return [{ status: 'warn', label: 'キャッシュ', hint: 'キャッシュの形式が不正です（次回アクセスで再取得されます）' }];
+      }
+      var minutes = (TS.config && TS.config.CACHE_MINUTES) || CACHE_MINUTES_FALLBACK;
+      var ageMs = Date.now() - obj._t;
+      var ageMin = Math.max(0, Math.floor(ageMs / 60000));
+      var expired = ageMs > minutes * 60000;
+      var hint = '取得時刻: ' + formatJst(new Date(obj._t)) + '（約' + ageMin + '分前）';
+      hint += expired ? '　※ 有効期限（' + minutes + '分）を過ぎているため、次回アクセスで自動的に再取得されます' : '　※ 有効期限（' + minutes + '分）内のため、このキャッシュが使われています';
+      return [{ status: expired ? 'warn' : 'ok', label: 'キャッシュ', hint: hint }];
+    } catch (e) {
+      return [{ status: 'ng', label: 'キャッシュ', hint: 'キャッシュの読み取りに失敗しました（プライベートブラウズ中はsessionStorageが使えない場合があります）' }];
+    }
+  }
+
+  function goReloadNocache() {
+    try {
+      var url = new URL(location.href);
+      url.searchParams.set('nocache', '1');
+      location.href = url.toString();
+    } catch (e) {
+      location.href = location.pathname + '?nocache=1';
+    }
+  }
+
+  // ==========================================================================
+  // 実行制御
+  // ==========================================================================
+  var running = false;
+
+  function setButtonsDisabled(disabled) {
+    var rerun = document.getElementById('check-rerun');
+    var nocacheBtn = document.getElementById('check-nocache');
+    if (rerun) rerun.disabled = disabled;
+    if (nocacheBtn) nocacheBtn.disabled = disabled;
+  }
+
+  function runAll() {
+    if (running) return;
+    running = true;
+    allRows = [];
+    setButtonsDisabled(true);
+    var summaryEl = document.getElementById('check-summary');
+    if (summaryEl) summaryEl.textContent = '診断を実行しています…';
+
+    // 1. シート到達性(常に個別fetchで最新の生応答を見る。data.jsのキャッシュは使わない)
+    var p1 = runSheetReachability();
+
+    // 2〜7が使う db は TS.data.load() を1回だけ呼んで共有する(実装方針どおり)。
+    // 実装設計書13-I-3: 診断は常に最新を見るため、URLの?nocache=1有無に関わらず常にキャッシュを破棄して再取得する
+    // （診断結果が古いキャッシュ由来にならないようにするための診断ページ専用の挙動。他ページのキャッシュ挙動は変えない）。
+    var p2to7 = TS.data.load({ nocache: true }).then(function (db) {
+      TS.render.footerNotices(db);
+      return { db: db, err: null };
+    }).catch(function (err) {
+      return { db: null, err: err };
+    }).then(function (result) {
+      var db = result.db, err = result.err;
+      record('check-columns-body', checkRequiredColumns(db, err));
+      record('check-chips-body', checkChipConsistency(db, err));
+      record('check-iddup-body', checkIdDuplicates(db, err));
+      record('check-scheme-body', checkUnsafeSchemes(db, err));
+      return checkImageLoad(db, err).then(function (rows) {
+        record('check-image-body', rows);
+      });
+    });
+
+    var p3 = checkGas().then(function (rows) { record('check-gas-body', rows); });
+    var p8 = Promise.resolve().then(function () { record('check-cache-body', checkCacheStatus()); });
+
+    Promise.all([p1, p2to7, p3, p8]).then(function () {
+      renderSummary();
+    }).catch(function (e) {
+      // 診断処理自体が想定外に失敗しても白画面にしない(要件2-3の精神を診断ページにも適用)
+      if (summaryEl) summaryEl.textContent = '診断中にエラーが発生しました。再診断ボタンでもう一度お試しください。';
+      if (typeof console !== 'undefined') console.error('[check.html] 診断失敗:', e);
+    }).then(function () {
+      running = false;
+      setButtonsDisabled(false);
+    });
+  }
+
+  // ---- 初期化 ----
+  TS.render.chrome('check');
+
+  var rerunBtn = document.getElementById('check-rerun');
+  if (rerunBtn) rerunBtn.addEventListener('click', runAll);
+  var nocacheBtn = document.getElementById('check-nocache');
+  if (nocacheBtn) nocacheBtn.addEventListener('click', goReloadNocache);
+
+  runAll();
+})();
+</script>
+</body>
+</html>

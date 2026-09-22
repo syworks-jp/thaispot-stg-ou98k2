@@ -1,0 +1,951 @@
+/*
+ * THAI SPOT TOKYO — 全ページ共通デザインシステム
+ * 作成: タチコマ(Wave1-B)。配色・書体・部品は「デザイン案_CD統合_v1.html」(発注者確定デザイン)を正とする。
+ * 構成の参考: demo/index.html(発注者高評価のデモ)。ただし配色はCD統合案(赤・金黄・クリーム)のみを使用し、
+ * demoの緑系配色(--thai-green等)は採用しない(要件定義書8章: 配色はCD統合案が正)。
+ * 375px基準モバイルファースト。768px+でコンテナ幅・2カラム化などを調整(実装設計書2章)。
+ */
+
+/* ==========================================================================
+   0. リセット
+   ========================================================================== */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+ul,
+ol {
+  list-style: none;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+img,
+svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+/* ==========================================================================
+   1. デザイントークン(CSSカスタムプロパティ) — デザイン案_CD統合_v1.html準拠
+   ========================================================================== */
+:root {
+  /* カラー: 案C×D統合(確定) */
+  --color-primary: #b3282d;       /* 主赤: ボタン・強調・見出しリンク */
+  --color-primary-deep: #a83226;  /* 深赤: 店舗名・タグ(赤) */
+  --color-gold: #f4c430;          /* 金黄: 枠アクセント(chip.y等) */
+  --color-gold-light: #ffd75e;    /* 金黄(明): ブランドロゴ文字・ヒーロー強調 */
+
+  --color-bg: #f5f1ea;            /* クリーム地: ページ背景 */
+  --color-card: #fffdf9;          /* カード背景 */
+  --color-border: #eee3cd;        /* カード枠・区切り線 */
+  --color-chip-border: #e8ddc8;   /* チップ枠(未選択時) */
+
+  --color-ink: #2d2a26;           /* 本文の基本文字色 */
+  --color-heading: #3d3929;       /* セクション見出し文字色 */
+  --color-muted: #8a8378;         /* 補足・メタ情報(エリア/駅など) */
+  --color-muted-2: #52493a;       /* 補足文字色(やや濃い) */
+  --color-subtle: #4b5563;        /* 注意書き等の控えめな文字色 */
+
+  --color-tag-gold-bg: #ffe9b8;   /* タグ(黄)背景 */
+  --color-tag-gold-ink: #7a5b12;  /* タグ(黄)文字 */
+  --color-tag-red-bg: #fbdfd7;    /* タグ(赤)背景 */
+  --color-tag-red-ink: #a83226;   /* タグ(赤)文字 */
+
+  --color-white: #ffffff;
+  --color-danger: #b3282d;        /* エラー表示は主赤を流用 */
+  --color-danger-bg: #fbdfd7;
+
+  /* ヒーロー背景(実写真が無い場合の代替グラデーション。デザイン案のfoodmark演出に対応) */
+  --hero-gradient: radial-gradient(120% 90% at 20% 15%, #e8a13c 0%, #cf5f2e 34%, #a83226 62%, #7a1f1c 100%);
+  /* 明るい料理写真でも文字が読めるよう全体を濃いめに・文字が乗る下部は特に濃く(8/25課長指摘対応) */
+  --hero-overlay: linear-gradient(180deg, rgba(25, 9, 7, .32) 0%, rgba(25, 9, 7, .18) 35%, rgba(25, 9, 7, .78) 100%);
+
+  /* 書体 */
+  --font-heading: Georgia, "Yu Mincho", "Hiragino Mincho ProN", serif;
+  --font-body: "Hiragino Sans", "Yu Gothic UI", "Meiryo", sans-serif;
+
+  /* 角丸・シャドウ・間隔 */
+  --radius-s: 8px;
+  --radius-m: 14px;
+  --radius-l: 16px;
+  --radius-pill: 999px;
+  --shadow-card: 0 1px 6px rgba(0, 0, 0, .07);
+  --shadow-float: 0 4px 14px rgba(0, 0, 0, .18);
+  --shadow-header: 0 1px 4px rgba(0, 0, 0, .08);
+
+  --container-max: 720px;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+}
+
+/* ==========================================================================
+   2. ベース
+   ========================================================================== */
+body {
+  font-family: var(--font-body);
+  background: var(--color-bg);
+  color: var(--color-ink);
+  line-height: 1.7;
+  font-size: 15px;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font-heading);
+  color: var(--color-heading);
+  line-height: 1.4;
+  font-weight: 700;
+}
+
+p {
+  color: var(--color-ink);
+}
+
+/* 動的テキストの改行反映(要件2-4: innerHTML禁止のためtextContent+CSS改行で対応) */
+.pre-wrap {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.container {
+  max-width: var(--container-max);
+  margin: 0 auto;
+  padding: 0 var(--space-4);
+}
+
+main {
+  display: block;
+  min-height: 60vh;
+}
+
+.section-title {
+  font-family: var(--font-heading);
+  font-size: 16px;
+  color: var(--color-tag-gold-ink);
+  margin: var(--space-6) 0 var(--space-3);
+}
+.section-title:first-child {
+  margin-top: var(--space-5);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}
+
+/* ==========================================================================
+   3. ヘッダー(ロゴ+ハンバーガーnav) — CSSのみのcheckbox hack
+   ========================================================================== */
+.site-header {
+  background: var(--color-white);
+  box-shadow: var(--shadow-header);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.site-header__inner {
+  max-width: var(--container-max);
+  margin: 0 auto;
+  padding: var(--space-3) var(--space-4);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+}
+
+.site-logo {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 16px;
+  letter-spacing: .04em;
+  color: var(--color-primary-deep);
+}
+
+/* チェックボックスハック本体は非表示 */
+.hamburger {
+  /* button要素化(iOS label タップ不発対応・2026-08-25)に伴いUA既定スタイルを打ち消す */
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  width: 32px;
+  height: 32px;
+  padding: 6px;
+  cursor: pointer;
+}
+.hamburger span {
+  display: block;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--color-primary-deep);
+}
+
+.site-nav {
+  display: none;
+  flex-direction: column;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: var(--color-white);
+  box-shadow: var(--shadow-float);
+  border-top: 1px solid var(--color-border);
+}
+.site-nav__link {
+  padding: var(--space-3) var(--space-4);
+  font-size: 14px;
+  border-bottom: 1px solid var(--color-bg);
+}
+.site-nav__link.is-current {
+  color: var(--color-primary);
+  font-weight: 700;
+}
+
+.site-nav.is-open {
+  display: flex;
+}
+
+@media (min-width: 768px) {
+  .hamburger { display: none; }
+  .site-nav {
+    display: flex;
+    flex-direction: row;
+    position: static;
+    box-shadow: none;
+    border-top: none;
+    background: none;
+    gap: var(--space-4);
+  }
+  .site-nav__link {
+    padding: var(--space-2) 0;
+    border-bottom: none;
+    font-size: 13.5px;
+  }
+  .site-nav__link.is-current {
+    border-bottom: 2px solid var(--color-primary);
+  }
+}
+
+/* ==========================================================================
+   4. フッター
+   ========================================================================== */
+.site-footer {
+  background: var(--color-white);
+  border-top: 1px solid var(--color-border);
+  margin-top: var(--space-7);
+  padding: var(--space-6) var(--space-4) var(--space-5);
+}
+
+.footer-nav {
+  max-width: var(--container-max);
+  margin: 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center; /* モバイルは中央寄せ(2026-08-25 課長iPhone実機フィードバック) */
+  text-align: center;
+  gap: var(--space-2) var(--space-4);
+  font-size: 13px;
+  color: var(--color-muted-2);
+  padding-bottom: var(--space-4);
+}
+.footer-nav__link:hover {
+  color: var(--color-primary);
+}
+
+.footer-notices {
+  max-width: var(--container-max);
+  margin: 0 auto;
+  padding: var(--space-4) 0;
+  border-top: 1px dashed var(--color-border);
+}
+.footer-notices__title {
+  font-size: 13px;
+  color: var(--color-tag-gold-ink);
+  margin-bottom: var(--space-2);
+}
+.footer-notices__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.footer-notices__link {
+  font-size: 13px;
+  color: var(--color-primary-deep);
+}
+.footer-notices__link:hover {
+  text-decoration: underline;
+}
+
+.footer-caution {
+  max-width: var(--container-max);
+  margin: 0 auto;
+  padding-top: var(--space-4);
+  border-top: 1px dashed var(--color-border);
+  font-size: 11.5px;
+  color: var(--color-muted);
+  white-space: pre-wrap;
+}
+
+.footer-copyright {
+  max-width: var(--container-max);
+  margin: var(--space-3) auto 0;
+  font-size: 11px;
+  color: var(--color-muted);
+}
+
+@media (min-width: 768px) {
+  .footer-nav { font-size: 13.5px; justify-content: flex-start; text-align: left; }
+}
+
+/* ==========================================================================
+   5. ヒーロー(写真+グラデオーバーレイ+検索バー)
+   ========================================================================== */
+.hero {
+  position: relative;
+  min-height: 280px;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-end;
+  /* 優先順位: texts('hero_image_url')(JSが--hero-imageを設定) > assets/img/hero.jpg > CSSグラデ(実装設計書6章) */
+  background-image: var(--hero-image, url('../img/hero.jpg')), var(--hero-gradient);
+  background-size: cover, cover;
+  background-position: center, center;
+  background-repeat: no-repeat, no-repeat;
+}
+
+.hero::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--hero-overlay);
+  pointer-events: none;
+}
+
+.hero__content {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  padding: var(--space-5) var(--space-4) var(--space-5);
+  color: var(--color-white);
+}
+
+.hero__brand {
+  font-size: 12.5px;
+  letter-spacing: .24em;
+  color: var(--color-gold-light);
+  font-weight: 700;
+  /* 白飯・卵など明るい背景でも沈まない三重影(8/25課長指摘対応) */
+  text-shadow: 0 0 5px rgba(0, 0, 0, .65), 0 1px 3px rgba(0, 0, 0, .8), 0 2px 12px rgba(0, 0, 0, .55);
+}
+
+.hero__title {
+  font-family: var(--font-heading);
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.5;
+  margin: var(--space-2) 0 var(--space-4);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, .7), 0 2px 16px rgba(0, 0, 0, .55);
+  color: var(--color-white);
+  white-space: pre-wrap;
+}
+
+.hero-search {
+  display: flex;
+  background: var(--color-white);
+  border-radius: var(--radius-m);
+  overflow: hidden;
+  box-shadow: var(--shadow-float);
+  max-width: 480px;
+}
+.hero-search__input {
+  flex: 1;
+  padding: 12px 16px;
+  font-size: 14px;
+  outline: none;
+  color: var(--color-ink);
+  min-width: 0;
+}
+.hero-search__button {
+  background: var(--color-primary);
+  color: var(--color-white);
+  padding: 0 20px;
+  font-weight: 700;
+  font-size: 14px;
+}
+.hero-search__button:hover {
+  background: var(--color-primary-deep);
+}
+
+@media (min-width: 768px) {
+  .hero { min-height: 340px; }
+  .hero__content { padding: var(--space-6) var(--space-5); }
+  .hero__title { font-size: 28px; }
+}
+
+/* ==========================================================================
+   6. チップ — デザイン案_CD統合_v1.html の .chip / .chip.on / .chip.y を踏襲
+   ========================================================================== */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  background: var(--color-white);
+  border: 1.5px solid var(--color-chip-border);
+  border-radius: var(--radius-pill);
+  padding: 5px 14px;
+  font-size: 13px;
+  color: var(--color-muted-2);
+  transition: background .12s, color .12s, border-color .12s;
+}
+a.chip:hover,
+button.chip:hover {
+  border-color: var(--color-primary);
+}
+.chip.on {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-white);
+  font-weight: 700;
+}
+.chip.y {
+  border-color: var(--color-gold);
+}
+.chip.on.y {
+  box-shadow: 0 0 0 2px rgba(244, 196, 48, .5) inset;
+}
+
+/* ==========================================================================
+   7. 店舗カード(検索結果カード) — 要件1章/3章準拠
+   ========================================================================== */
+.card-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.store-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--color-card);
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-l);
+  overflow: hidden;
+  box-shadow: var(--shadow-card);
+}
+a.store-card:hover {
+  border-color: var(--color-primary);
+}
+
+.store-card__media {
+  aspect-ratio: 4 / 3;
+  background: var(--color-bg);
+  overflow: hidden;
+}
+.store-card__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.store-card__body {
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.store-card__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 2px;
+}
+
+.store-card__name {
+  font-family: var(--font-heading);
+  color: var(--color-primary-deep);
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.store-card__meta {
+  font-size: 11.5px;
+  color: var(--color-muted);
+}
+
+.store-card__desc {
+  font-size: 12.5px;
+  color: var(--color-muted-2);
+  margin-top: 2px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.store-card__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+@media (min-width: 768px) {
+  .card-list {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-4);
+  }
+  .store-card { flex-direction: row; }
+  .store-card__media { width: 38%; aspect-ratio: auto; }
+  .store-card__body { flex: 1; }
+}
+
+/* ==========================================================================
+   8. バッジ(Restaurant/Cafe/Thai SELECT)
+   ========================================================================== */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 10.5px;
+  font-weight: 700;
+  border-radius: var(--radius-pill);
+  padding: 2px 9px;
+  line-height: 1.6;
+  white-space: nowrap;
+}
+.badge--type-restaurant {
+  background: var(--color-tag-red-bg);
+  color: var(--color-tag-red-ink);
+}
+.badge--type-cafe {
+  background: var(--color-tag-gold-bg);
+  color: var(--color-tag-gold-ink);
+}
+.badge--thaiselect {
+  background: var(--color-gold);
+  color: #5c3d00;
+  border: 1px solid #c99a12;
+}
+
+/* 検索チップ内の料理/シーン等タグ(store-card__tags用) */
+.tag {
+  font-size: 10.5px;
+  border-radius: var(--radius-pill);
+  padding: 2px 9px;
+  background: var(--color-tag-gold-bg);
+  color: var(--color-tag-gold-ink);
+  font-weight: 700;
+}
+.tag--red {
+  background: var(--color-tag-red-bg);
+  color: var(--color-tag-red-ink);
+}
+
+/* ==========================================================================
+   9. セクションパネル(汎用パネル・タイカフェ/Thai SELECT導線などのプロモーションパネル)
+   ========================================================================== */
+.panel {
+  background: var(--color-white);
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-m);
+  padding: var(--space-4);
+  margin-top: var(--space-4);
+}
+.panel h2, .panel h3 {
+  font-size: 13px;
+  color: var(--color-muted);
+  margin: var(--space-3) 0 var(--space-2);
+}
+.panel h2:first-child, .panel h3:first-child {
+  margin-top: 0;
+}
+
+.promo-panel {
+  margin-top: var(--space-4);
+  background: var(--color-white);
+  border-radius: var(--radius-m);
+  border: 1.5px solid var(--color-border);
+  padding: 14px 16px;
+}
+.promo-panel__title {
+  font-family: var(--font-heading);
+  font-size: 14.5px;
+  color: var(--color-heading);
+  font-weight: 700;
+}
+.promo-panel__desc {
+  font-size: 12px;
+  color: var(--color-muted);
+  margin-top: 2px;
+}
+.promo-panel__link {
+  display: inline-block;
+  margin-top: var(--space-2);
+  color: var(--color-primary);
+  font-size: 12.5px;
+  font-weight: 700;
+}
+.promo-panel__link:hover {
+  text-decoration: underline;
+}
+
+/* ホーム「何から探す？」6ブロック */
+.explore-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-3);
+}
+.explore-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  background: var(--color-white);
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-m);
+  padding: var(--space-4) var(--space-2);
+  text-align: center;
+  box-shadow: var(--shadow-card);
+}
+.explore-tile:hover {
+  border-color: var(--color-primary);
+}
+.explore-tile__icon {
+  /* 8/25課長要望: 絵文字→自前SVGラインアイコン(端末差ゼロ・配色統一)。金黄の薄地円に深赤ストローク */
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: #fdf1d7;
+  border: 1px solid #f4e2b8;
+  color: var(--color-primary-deep);
+}
+.explore-tile__icon svg {
+  width: 24px;
+  height: 24px;
+  display: block;
+}
+.explore-tile__label {
+  font-size: 12.5px;
+  color: var(--color-muted-2);
+  font-weight: 700;
+}
+
+@media (min-width: 768px) {
+  .explore-grid { grid-template-columns: repeat(3, 1fr); }
+}
+
+/* ==========================================================================
+   10. ボタン
+   ========================================================================== */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-s);
+  padding: 11px 22px;
+  font-size: 14px;
+  font-weight: 700;
+  text-align: center;
+  transition: background .12s, opacity .12s;
+}
+.btn--primary {
+  background: var(--color-primary);
+  color: var(--color-white);
+}
+.btn--primary:hover {
+  background: var(--color-primary-deep);
+}
+.btn--outline {
+  background: var(--color-white);
+  color: var(--color-primary);
+  border: 1.5px solid var(--color-primary);
+}
+.btn--outline:hover {
+  background: var(--color-tag-red-bg);
+}
+.btn--secondary {
+  background: #b6ad9d;
+  color: var(--color-white);
+}
+.btn:disabled,
+.btn[aria-disabled="true"] {
+  opacity: .5;
+  cursor: not-allowed;
+}
+
+/* ==========================================================================
+   11. フォーム部品(お問い合わせ等)
+   ========================================================================== */
+.form-field {
+  margin-bottom: var(--space-4);
+}
+.form-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-heading);
+  margin-bottom: var(--space-2);
+}
+.form-label .required {
+  color: var(--color-primary);
+  font-size: 11px;
+  margin-left: var(--space-1);
+}
+.form-input,
+.form-textarea,
+.form-select {
+  display: block;
+  width: 100%;
+  border: 1.5px solid var(--color-chip-border);
+  border-radius: var(--radius-s);
+  padding: 10px 12px;
+  font-size: 15px;
+  background: var(--color-white);
+  color: var(--color-ink);
+}
+.form-input:focus,
+.form-textarea:focus,
+.form-select:focus {
+  border-color: var(--color-primary);
+}
+.form-textarea {
+  min-height: 140px;
+  resize: vertical;
+}
+.form-radio-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+.form-radio-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+}
+.form-hint {
+  font-size: 11.5px;
+  color: var(--color-muted);
+  margin-top: var(--space-1);
+}
+.form-error {
+  font-size: 12px;
+  color: var(--color-danger);
+  margin-top: var(--space-1);
+}
+.form-success {
+  font-size: 12px;
+  color: #1b7a5a;
+  margin-top: var(--space-1);
+}
+
+/* ハニーポット項目: CSSで不可視化(bot対策・要件7章) */
+.form-honeypot {
+  position: absolute !important;
+  left: -9999px !important;
+  width: 1px; height: 1px;
+  overflow: hidden;
+}
+
+/* ==========================================================================
+   12. 文章ページ(About/Thai SELECT/掲載情報について/プライバシーポリシー/page.html共通)
+   ========================================================================== */
+.article {
+  padding: var(--space-5) 0 var(--space-7);
+}
+.article__title {
+  font-family: var(--font-heading);
+  font-size: 20px;
+  color: var(--color-primary-deep);
+  margin-bottom: var(--space-2);
+}
+.article__meta {
+  font-size: 11.5px;
+  color: var(--color-muted);
+  margin-bottom: var(--space-4);
+}
+.article__image {
+  width: 100%;
+  border-radius: var(--radius-m);
+  margin-bottom: var(--space-4);
+  overflow: hidden;
+}
+.article__image img {
+  width: 100%;
+  object-fit: cover;
+}
+.article__body {
+  font-size: 14.5px;
+  line-height: 1.9;
+  color: var(--color-ink);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ==========================================================================
+   13. エラー・空状態・読み込み中の共通表示
+   ========================================================================== */
+.state-panel {
+  text-align: center;
+  padding: 40px 16px;
+  color: var(--color-muted);
+}
+.state-panel__code {
+  font-family: var(--font-heading);
+  font-size: 44px;
+  color: var(--color-border);
+  font-weight: 700;
+}
+.state-panel__title {
+  font-family: var(--font-heading);
+  font-size: 17px;
+  color: var(--color-heading);
+  margin: var(--space-2) 0 var(--space-2);
+}
+.state-panel__desc {
+  font-size: 13px;
+  color: var(--color-muted);
+  line-height: 1.8;
+}
+.state-panel__actions {
+  margin-top: var(--space-5);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  justify-content: center;
+}
+.state-panel--error .state-panel__title {
+  color: var(--color-danger);
+}
+.state-panel--error {
+  background: var(--color-danger-bg);
+  border-radius: var(--radius-m);
+}
+
+/* ==========================================================================
+   14. 広告枠 — 該当広告なしなら何も出さない(render.jsがElementを返さない設計)
+   ========================================================================== */
+.ad-slot {
+  margin: var(--space-5) 0;
+  text-align: center;
+}
+.ad-slot__link,
+.ad-slot__img {
+  display: inline-block;
+  max-width: 100%;
+  border-radius: var(--radius-m);
+  overflow: hidden;
+}
+.ad-slot__img {
+  width: 100%;
+}
+
+/* ==========================================================================
+   15. 店舗詳細ページ(store.html固有クラス) — 設計書11章TODO8: インラインstyleを専用クラスへ移行
+   ========================================================================== */
+/* 画像ギャラリー: Exterior_Image/Food_Imageの2枚構成。1枚のみの時は--singleで1カラムに切替(0枚は非描画)。 */
+.store-detail__gallery {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+  margin: var(--space-3) 0 var(--space-4);
+}
+.store-detail__gallery--single {
+  grid-template-columns: 1fr;
+}
+
+.store-detail__map-btn {
+  margin: var(--space-3) 0;
+}
+
+/* 公式サイト/Instagramボタン列(登録時のみ表示・複数行折り返し対応) */
+.store-detail__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: var(--space-3) 0;
+}
+
+.store-detail__tiktok {
+  margin: var(--space-2) 0 var(--space-3);
+}
+
+.store-detail__notice {
+  margin-top: 20px;
+}
+.store-detail__notice-btn {
+  margin-top: var(--space-2);
+}
+
+/* ==========================================================================
+   16. その他ユーティリティ
+   ========================================================================== */
+[hidden] {
+  display: none !important;
+}

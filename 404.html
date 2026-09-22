@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- 404はGitHub Pagesにより任意の深さのURLで表示されるため、相対参照が /aaa/bbb 配下に解決されて
+     「ボタンを押してもまた404」になる不具合があった(2026-08-31検収指摘A-5)。baseでルート基準に固定する。 -->
+<base href="/thaispot-stg-ou98k2/">
+<meta name="robots" content="noindex, nofollow"> <!-- 検収後の移管時にこの行を削除 -->
+<title>ページが見つかりません | THAI SPOT TOKYO</title>
+<meta name="description" content="お探しのページが見つかりませんでした。THAI SPOT TOKYOのホームまたはお店を探すページをご利用ください。">
+<link rel="stylesheet" href="assets/css/style.css?v=20260826a">
+</head>
+<body>
+
+<div id="site-header"></div>
+
+<main id="main-content">
+  <div class="container">
+    <section class="state-panel state-panel--error">
+      <p class="state-panel__code">404</p>
+      <h1 class="state-panel__title">ページが見つかりませんでした</h1>
+      <p class="state-panel__desc">URLが変更されたか、削除された可能性があります。<br>下記からお探しのページをご覧ください。</p>
+      <div class="state-panel__actions">
+        <a class="btn btn--primary" href="index.html">ホームへ戻る</a>
+        <a class="btn btn--outline" href="search.html">お店を探す</a>
+      </div>
+    </section>
+  </div>
+</main>
+
+<div id="site-footer"></div>
+
+<!-- 要件1章: 404はホーム・お店を探すへの導線のみ・データ読込なしで単独動作。
+     スプシ取得に失敗している状況でも表示できることが目的のページなので、
+     文言はtexts()経由にせずHTMLへ直接記載する(index.html等の他ページとは異なる意図的な例外)。
+     スクリプトは共通ヘッダー/フッターの描画に必要な最小限(util.js・render.js)のみを読み込み、
+     TS.data.load()は呼ばない。 -->
+<script src="assets/js/config.js?v=20260922a"></script>
+<script src="assets/js/texts-default.js?v=20260922a"></script>
+<script src="assets/js/util.js?v=20260922a"></script>
+<script src="assets/js/render.js?v=20260826a"></script>
+<script>
+(function () {
+  'use strict';
+  if (window.TS && TS.render && typeof TS.render.chrome === 'function') {
+    TS.render.chrome('404');
+  }
+})();
+</script>
+</body>
+</html>

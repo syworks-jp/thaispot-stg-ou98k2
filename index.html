@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta name="robots" content="noindex, nofollow"> <!-- staging only -->
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>THAI SPOT TOKYO | 東京のタイ料理店・タイカフェ検索</title>
+<meta name="description" content="東京都内のタイ料理店・タイカフェを、料理・エリア・駅・シーン・特徴から探せる検索サイトです。">
+<!-- Google Search Console の所有権確認タグ(改修6-(e)・2026-09-22 発注者支給) -->
+<meta name="google-site-verification" content="zopqPQv0fN5-KnyUCg4_Tm0X33ekgBTEK4AAmWwKxs0">
+<link rel="canonical" href="https://thaispot-tokyo.com/">
+<!-- SNS共有カード(OGP/Twitter)。画像はサイト共通 assets/img/ogp.jpg・URLは絶対指定(改修6-(b)) -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="THAI SPOT TOKYO">
+<meta property="og:locale" content="ja_JP">
+<meta property="og:title" content="THAI SPOT TOKYO | 東京のタイ料理店・タイカフェ検索">
+<meta property="og:description" content="東京都内のタイ料理店・タイカフェを、料理・エリア・駅・シーン・特徴から探せる検索サイトです。">
+<meta property="og:url" content="https://thaispot-tokyo.com/">
+<meta property="og:image" content="https://thaispot-tokyo.com/assets/img/ogp.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="assets/css/style.css?v=20260826a">
+<style>
+  /* このページ限定の補助スタイル(style.cssは編集しない・search.html等の局所style慣例に準拠・実装設計書13-H)。
+     既存デザイントークン(:root変数)のみ再利用し、新しい配色は増やさない。 */
+  #hero-cta { margin-top: var(--space-3); } /* ヒーロー内メインボタン(13-H-2)を検索バーから少し離す */
+  .hero__lead { font-size: 13px; color: #fff; margin: -2px 0 10px; text-shadow: 0 1px 3px rgba(0,0,0,.7), 0 2px 10px rgba(0,0,0,.5); } /* 仕様書3-1の説明文(影強化=8/25課長指摘対応) */
+  .promo-panel__actions { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-2); } /* Thai SELECT 2ボタン化(13-H-5)の横並び */
+</style>
+<!-- GA4(改修6-(f))。config.js の STAGING_MODE:true のときは ga.js が何もしない。
+     defer なので本文末尾の config.js が評価された後に実行される(読み込み順の規約どおり)。 -->
+<script defer src="assets/js/ga.js?v=20260922a"></script>
+</head>
+<body>
+
+<div id="site-header"></div>
+
+<main id="main-content">
+  <!-- ヒーロー(実装設計書6章): 写真+グラデオーバーレイ+ブランド+キャッチ+検索バー+メインボタン(13-H-2)。
+       見出し・背景画像・ボタン文言はtexts()取得後にJSで上書きするが、それまでは下記の初期値をそのまま表示する
+       (要件2-2: 文言層は無停止。データ取得失敗時も白画面・空欄にしない) -->
+  <section class="hero" id="hero">
+    <div class="hero__content">
+      <p class="hero__brand">THAI SPOT TOKYO</p>
+      <h1 class="hero__title" id="hero-title">今日行きたい、
+東京のタイを見つけよう。</h1>
+      <!-- 仕様書3-1「説明」(最終ゲート仕上げで追加・texts: hero_lead) -->
+      <p class="hero__lead" id="hero-lead">食べたい料理・場所・利用シーンから、東京のタイ料理店＆タイカフェを探せます。</p>
+      <form class="hero-search" id="hero-search-form" action="search.html" method="get">
+        <input class="hero-search__input" type="search" name="freeword" placeholder="店名・料理名・駅名で検索" aria-label="フリーワードで検索">
+        <button class="hero-search__button" type="submit">検索</button>
+      </form>
+      <!-- 仕様書3-1メインボタン(実装設計書13-H-2で新設): [条件からお店を探す →]→search.html -->
+      <a class="btn btn--primary" id="hero-cta" href="search.html">条件からお店を探す →</a>
+    </div>
+  </section>
+
+  <div class="container">
+
+    <!-- シート設定に問題がある可能性があるときだけ表示(実装設計書13-H-12。search.html等と同一の慣例:
+         #warnings-banner-mountへappendChild。TS.render.warningsBannerはtypeofガード付きで独立動作) -->
+    <div id="warnings-banner-mount"></div>
+
+    <!-- 「何から探す？」6ブロック: search.htmlの該当カテゴリにフォーカス遷移(条件は未適用のまま・要件6章)。
+         各タイルの説明文(実装設計書13-H-7)は仕様書3-1の本文どおり・texts()駆動。
+         6番目は仕様書3-1どおり「タイカフェ」→cafe.html(実装設計書13-H-6。旧「タイプから探す」は廃止。
+         店舗タイプはsearch.html内の選択UIで引き続き選べるため機能喪失なし) -->
+    <section aria-labelledby="explore-title">
+      <h2 class="section-title" id="explore-title">何から探す？</h2>
+      <div class="explore-grid">
+        <a class="explore-tile" href="search.html#focus=dish">
+          <span class="explore-tile__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M4 12.5h16"/><path d="M20 12.5a8 8 0 0 1-16 0"/><path d="M9.3 4.5c0 1.3-1 1.9-1 3.2"/><path d="M13.7 4.5c0 1.3-1 1.9-1 3.2"/></svg></span>
+          <span class="explore-tile__label">メニューから探す</span>
+          <span class="promo-panel__desc" id="explore-desc-dish">ガパオ、カオマンガイ、パッタイなど、食べたいタイ料理からお店を探せます。</span>
+        </a>
+        <a class="explore-tile" href="search.html#focus=area">
+          <span class="explore-tile__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M12 21.5s-6.5-5.6-6.5-10a6.5 6.5 0 0 1 13 0c0 4.4-6.5 10-6.5 10Z"/><circle cx="12" cy="11.2" r="2.3"/></svg></span>
+          <span class="explore-tile__label">エリアから探す</span>
+          <span class="promo-panel__desc" id="explore-desc-area">新宿、渋谷、池袋など、街・エリアからお店を探せます。</span>
+        </a>
+        <a class="explore-tile" href="search.html#focus=station">
+          <span class="explore-tile__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" focusable="false"><rect x="5.5" y="3.5" width="13" height="14" rx="3"/><path d="M5.5 11h13"/><circle cx="9.2" cy="14.2" r="1"/><circle cx="14.8" cy="14.2" r="1"/><path d="M8.5 20.5l1.2-3"/><path d="M15.5 20.5l-1.2-3"/></svg></span>
+          <span class="explore-tile__label">最寄駅から探す</span>
+          <span class="promo-panel__desc" id="explore-desc-station">新宿駅、高田馬場駅、代々木駅など、最寄駅からお店を探せます。</span>
+        </a>
+        <a class="explore-tile" href="search.html#focus=scene">
+          <span class="explore-tile__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" focusable="false"><circle cx="9" cy="8.3" r="3.1"/><path d="M3.6 19.5c.4-3.1 2.7-5 5.4-5s5 1.9 5.4 5"/><circle cx="16.9" cy="9.3" r="2.4"/><path d="M16.2 14.7c2.5.3 4.1 1.9 4.4 4.3"/></svg></span>
+          <span class="explore-tile__label">シーンから探す</span>
+          <span class="promo-panel__desc" id="explore-desc-scene">一人ランチ、デート、女子会、家族など、今日の利用シーンに合うお店を探せます。</span>
+        </a>
+        <a class="explore-tile" href="search.html#focus=feature">
+          <span class="explore-tile__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M12 4.2l2.3 4.7 5.2.76-3.76 3.66.89 5.18L12 16.06l-4.63 2.44.89-5.18L4.5 9.66l5.2-.76Z"/></svg></span>
+          <span class="explore-tile__label">特徴から探す</span>
+          <span class="promo-panel__desc" id="explore-desc-feature">Thai SELECT、タイスイーツ、タイドリンクなど、お店の特徴から探せます。</span>
+        </a>
+        <a class="explore-tile" href="cafe.html">
+          <span class="explore-tile__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M5.5 9.5h10.5v4.5a5 5 0 0 1-5 5h-.5a5 5 0 0 1-5-5Z"/><path d="M16 10.6h1.3a2.6 2.6 0 0 1 0 5.2H16"/><path d="M9 3.5c0 1.2-1 1.7-1 3"/><path d="M13 3.5c0 1.2-1 1.7-1 3"/></svg></span>
+          <span class="explore-tile__label">タイカフェを探す</span>
+          <span class="promo-panel__desc" id="explore-desc-cafe">タイティーやタイスイーツを楽しみたい日に。東京のタイカフェを探せます。</span>
+        </a>
+      </div>
+    </section>
+
+    <!-- おすすめ条件チップ: タップで条件適用済み遷移(要件6章)。値はSite_Texts「recommend_chips」駆動(実装設計書7章) -->
+    <section id="recommend-section" aria-labelledby="recommend-title" hidden>
+      <h2 class="section-title" id="recommend-title">おすすめの条件から探す</h2>
+      <div id="recommend-chips" class="chips"></div>
+    </section>
+
+    <!-- タイ料理、何を食べる？(仕様書3-1・実装設計書13-H-1で新設): 「定番から探す」「ちょっと珍しいタイ料理」
+         各5チップ+[すべてのメニューから探す →]。チップはtexts('home_dishes_popular'/'home_dishes_rare')
+         駆動・resolveChipParamKey(下記スクリプト内・おすすめチップと同一関数)でMenusと突合し、未解決ラベルは
+         非表示。仕様書の「ガパオ」は実在値「ガパオライス」に置換済み(fixtures/Menus.json確認・報告書に対応表)。
+         おすすめチップ同様、db確定前(または通信失敗時)は非表示のまま(既存recommend-sectionの挙動に合わせる) -->
+    <section id="dishes-section" aria-labelledby="dishes-title" hidden>
+      <h2 class="section-title" id="dishes-title">タイ料理、何を食べる？</h2>
+      <p class="promo-panel__desc" id="dishes-lead">「タイ料理が食べたい。でも、何を選べばいい？ そんなときは料理から探してみてください。」</p>
+      <div class="panel" id="dishes-popular-panel" hidden>
+        <h3 id="dishes-popular-title">定番から探す</h3>
+        <div id="dishes-popular-chips" class="chips"></div>
+      </div>
+      <div class="panel" id="dishes-rare-panel" hidden>
+        <h3 id="dishes-rare-title">ちょっと珍しいタイ料理</h3>
+        <div id="dishes-rare-chips" class="chips"></div>
+      </div>
+      <p id="dishes-cta"><a class="btn btn--outline" id="dishes-cta-link" href="search.html#focus=dish">すべてのメニューから探す →</a></p>
+    </section>
+
+    <!-- タイカフェ導線(要件1章: ホーム→/cafe.html) -->
+    <section class="promo-panel" id="promo-cafe">
+      <h2 class="promo-panel__title" id="promo-cafe-title">東京でタイカフェへ。</h2>
+      <p class="promo-panel__desc" id="promo-cafe-desc">タイティーやタイスイーツを楽しめる、東京のタイカフェを探してみませんか？</p>
+      <a class="promo-panel__link" id="promo-cafe-link" href="cafe.html">タイカフェを見る →</a>
+    </section>
+
+    <!-- Thai SELECT導線(要件1章: ホーム→/thaiselect.html)。実装設計書13-H-5: 仕様書3-1どおり2ボタン化
+         ([Thai SELECT認定店を見る →]→search.html?feature=Thai SELECT認定(実在Feature名・URLエンコード)
+         +[Thai SELECTとは？ →]→thaiselect.html)。未使用だったhome_thaiselect_button/home_cafe_buttonを
+         実際に使う形にした(promoリンクのtexts駆動化) -->
+    <section class="promo-panel" id="promo-thaiselect">
+      <h2 class="promo-panel__title" id="promo-thaiselect-title">Thai SELECT認定店を探す</h2>
+      <p class="promo-panel__desc" id="promo-thaiselect-desc">タイ国政府が認定する「Thai SELECT」。東京の認定店から探すこともできます。</p>
+      <div class="promo-panel__actions">
+        <a class="btn btn--primary" id="promo-thaiselect-primary" href="search.html">Thai SELECT認定店を見る →</a>
+        <a class="btn btn--outline" id="promo-thaiselect-secondary" href="thaiselect.html">Thai SELECTとは？ →</a>
+      </div>
+    </section>
+
+    <!-- About導線(仕様書3-1/3-7・実装設計書13-H-3で新設): [THAI SPOT TOKYOについて →]→about.html。
+         既存のpromo-panel部品をそのまま流用(新規CSS不要) -->
+    <section class="promo-panel" id="promo-about">
+      <h2 class="promo-panel__title" id="promo-about-title">東京のタイ料理を、もっと探しやすく。</h2>
+      <p class="promo-panel__desc" id="promo-about-desc">THAI SPOT TOKYOは、東京のタイ料理店・タイカフェを、料理・場所・利用シーン・特徴から探せるサービスです。</p>
+      <a class="promo-panel__link" id="promo-about-link" href="about.html">THAI SPOT TOKYOについて →</a>
+    </section>
+
+    <!-- 広告枠(要件1章: ホーム下部1)。該当広告なしなら何も描画されない -->
+    <div id="home-ad-slot"></div>
+
+    <!-- データ取得失敗時のみ表示(要件2-3: 白画面禁止) -->
+    <div id="home-error" hidden></div>
+
+  </div>
+</main>
+
+<div id="site-footer"></div>
+
+<script src="assets/js/config.js?v=20260922a"></script>
+<script src="assets/js/texts-default.js?v=20260922a"></script>
+<script src="assets/js/util.js?v=20260922a"></script>
+<script src="assets/js/data.js?v=20260826a"></script>
+<script src="assets/js/render.js?v=20260826a"></script>
+<script src="assets/js/log.js?v=20260826a"></script>
+<script>
+(function () {
+  'use strict';
+
+  // 共通ヘッダー/フッターはdbなしで即描画(体感速度優先)。フッターの「お知らせ・特集」はdb確定後に追って反映する。
+  TS.render.chrome('home');
+
+  // Thai SELECT主ボタンのhref(実装設計書13-H-5: search.html?feature=Thai SELECT認定・実在Feature名を
+  // encodeURIComponentで必ずエスケープ・thaiselect.htmlの既存CTA実装と同じ組み立て方)。
+  // 固定値でdbに依存しないため、データ取得を待たず同期的に設定する(通信失敗時もリンク切れにしない)。
+  var thaiselectPrimary = document.getElementById('promo-thaiselect-primary');
+  if (thaiselectPrimary) thaiselectPrimary.href = 'search.html?feature=' + encodeURIComponent('Thai SELECT認定');
+
+  TS.data.load().then(function (db) {
+    TS.render.footerNotices(db);
+    insertWarningsBanner(db);
+
+    // ヒーロー見出し・メインボタン(要件2-2: Site_Texts駆動。値が無ければHTML初期値のまま)
+    var heroCatch = db.texts('hero_catch');
+    if (heroCatch) TS.util.setText('hero-title', heroCatch);
+    setTextIfPresent('hero-lead', db.texts('hero_lead'));
+    setTextIfPresent('hero-cta', db.texts('hero_cta_label'));
+
+    // ヒーロー背景画像(実装設計書6章: texts('hero_image_url') > assets/img/hero.jpg > CSSグラデ)
+    var heroImageRaw = db.texts('hero_image_url');
+    if (heroImageRaw) {
+      var safeHero = TS.util.safeUrl(heroImageRaw, { image: true });
+      if (safeHero) {
+        var heroEl = document.getElementById('hero');
+        if (heroEl) heroEl.style.setProperty('--hero-image', 'url("' + safeHero + '")');
+      }
+    }
+
+    renderExploreDescriptions(db);
+    renderRecommendChips(db);
+    renderDishSection(db);
+
+    // タイカフェ/Thai SELECT/About導線の文言(Site_Texts駆動)
+    setTextIfPresent('promo-cafe-title', db.texts('home_cafe_title'));
+    setTextIfPresent('promo-cafe-desc', db.texts('home_cafe_desc'));
+    setTextIfPresent('promo-cafe-link', db.texts('home_cafe_button'));
+
+    setTextIfPresent('promo-thaiselect-title', db.texts('home_thaiselect_title'));
+    setTextIfPresent('promo-thaiselect-desc', db.texts('home_thaiselect_desc'));
+    setTextIfPresent('promo-thaiselect-primary', db.texts('home_thaiselect_button'));
+    setTextIfPresent('promo-thaiselect-secondary', db.texts('home_thaiselect_secondary_button'));
+
+    setTextIfPresent('promo-about-title', db.texts('home_about_title'));
+    setTextIfPresent('promo-about-desc', db.texts('home_about_desc'));
+    setTextIfPresent('promo-about-link', db.texts('home_about_button'));
+
+    // 広告枠(要件1章: home_bottom。該当広告なしならadSlotはnullを返すので何もしない)
+    var ad = TS.render.adSlot('home_bottom', db);
+    if (ad) document.getElementById('home-ad-slot').appendChild(ad);
+
+  }).catch(function (err) {
+    // 要件2-3: 通信失敗・非200時は「データを読み込めませんでした」表示(白画面禁止)
+    var errEl = document.getElementById('home-error');
+    if (errEl) {
+      errEl.hidden = false;
+      TS.data.loadError(errEl, err);
+    }
+  });
+
+  // シート設定に問題がある可能性があるときだけ小バナーを先頭(コンテナ内)に挿入(実装設計書13-H-12)
+  function insertWarningsBanner(db) {
+    if (typeof TS.render.warningsBanner !== 'function') return;
+    var banner = TS.render.warningsBanner(db);
+    if (!banner) return;
+    var mount = document.getElementById('warnings-banner-mount');
+    if (mount) mount.appendChild(banner);
+  }
+
+  function setTextIfPresent(id, text) {
+    if (text) TS.util.setText(id, text);
+  }
+
+  // 「何から探す？」6タイルの説明文(実装設計書13-H-7)
+  function renderExploreDescriptions(db) {
+    setTextIfPresent('explore-desc-dish', db.texts('home_block_dish_desc'));
+    setTextIfPresent('explore-desc-area', db.texts('home_block_area_desc'));
+    setTextIfPresent('explore-desc-station', db.texts('home_block_station_desc'));
+    setTextIfPresent('explore-desc-scene', db.texts('home_block_scene_desc'));
+    setTextIfPresent('explore-desc-feature', db.texts('home_block_feature_desc'));
+    setTextIfPresent('explore-desc-cafe', db.texts('home_block_cafe_desc'));
+  }
+
+  // おすすめ条件チップを描画する。値はカンマ区切りのtexts('recommend_chips')、
+  // 無ければconfig.jsのTS.config.RECOMMEND_CHIPSにフォールバック(実装設計書7章)
+  function renderRecommendChips(db) {
+    var section = document.getElementById('recommend-section');
+    var mount = document.getElementById('recommend-chips');
+    if (!mount || !section) return;
+
+    var raw = db.texts('recommend_chips');
+    var labels = raw
+      ? parseCsvLabels(raw)
+      : (TS.config.RECOMMEND_CHIPS || []).map(function (s) { return (s || '').trim(); }).filter(Boolean);
+    var items = buildChipItems(labels, db);
+
+    if (!items.length) {
+      section.hidden = true;
+      return;
+    }
+    section.hidden = false;
+    renderChipGroup(items, mount);
+  }
+
+  // タイ料理、何を食べる？(仕様書3-1・実装設計書13-H-1): 「定番から探す」「ちょっと珍しいタイ料理」の
+  // 2グループをそれぞれ resolveChipParamKey で実マスタ突合し、未解決ラベルは非表示にする
+  // (要件2-4「無言の誤誘導禁止」＝存在しない条件はリンクとして出さない、おすすめチップと同じ方針)。
+  function renderDishSection(db) {
+    var section = document.getElementById('dishes-section');
+    if (!section) return;
+
+    setTextIfPresent('dishes-title', db.texts('home_dishes_heading'));
+    setTextIfPresent('dishes-lead', db.texts('home_dishes_lead'));
+    setTextIfPresent('dishes-cta-link', db.texts('home_dishes_cta_label'));
+
+    var popularItems = buildChipItems(parseCsvLabels(db.texts('home_dishes_popular')), db);
+    var rareItems = buildChipItems(parseCsvLabels(db.texts('home_dishes_rare')), db);
+
+    toggleDishPanel('dishes-popular-panel', 'dishes-popular-title', 'dishes-popular-chips',
+      db.texts('home_dishes_popular_heading'), popularItems);
+    toggleDishPanel('dishes-rare-panel', 'dishes-rare-title', 'dishes-rare-chips',
+      db.texts('home_dishes_rare_heading'), rareItems);
+
+    // 両グループとも0件なら見出し/リード文/CTAだけの空セクションを出さない
+    section.hidden = !(popularItems.length || rareItems.length);
+  }
+
+  function toggleDishPanel(panelId, titleId, chipsId, headingText, items) {
+    var panel = document.getElementById(panelId);
+    if (!panel) return;
+    if (!items.length) { panel.hidden = true; return; }
+    setTextIfPresent(titleId, headingText);
+    renderChipGroup(items, document.getElementById(chipsId));
+    panel.hidden = false;
+  }
+
+  // ---- チップ解決の共通ヘルパー(おすすめチップ/タイ料理2グループで共用。resolveChipParamKeyは
+  //      このファイル内の1箇所のみに実装し重複実装しない・実装設計書13-H注意点) ----
+
+  function parseCsvLabels(raw) {
+    return (raw ? raw.split(',') : [])
+      .map(function (s) { return (s || '').trim(); })
+      .filter(Boolean);
+  }
+
+  function buildChipItems(labels, db) {
+    return (labels || [])
+      .map(function (label) { return { value: label, label: label, paramKey: resolveChipParamKey(label, db) }; })
+      .filter(function (it) { return !!it.paramKey; });
+  }
+
+  function renderChipGroup(items, mount) {
+    if (!mount) return;
+    while (mount.firstChild) mount.removeChild(mount.firstChild);
+    if (!items.length) return;
+    var chipsEl = TS.render.chips(items, {
+      hrefFor: function (value) {
+        var it = items.filter(function (x) { return x.value === value; })[0];
+        return 'search.html?' + it.paramKey + '=' + encodeURIComponent(value);
+      }
+    });
+    while (chipsEl.firstChild) mount.appendChild(chipsEl.firstChild);
+  }
+
+  // 各ラベルがどのカテゴリ(料理/エリア/駅/シーン/特徴/タイプ)に属すか、マスタと突合して判定する。
+  // 要件2-4: 値の突合はトリム+正規化。マスタに存在しない値は無視して表示しない(無言の誤誘導を避ける=
+  // 存在しない条件は「見つからなかった」表示をするより、そもそもリンクとして出さない方が安全なため)
+  function resolveChipParamKey(label, db) {
+    var norm = TS.util.norm(label);
+    if ((db.menus || []).some(function (m) { return TS.util.norm(m.name) === norm; })) return 'dish';
+    if ((db.scenes || []).some(function (s) { return TS.util.norm(s.name) === norm; })) return 'scene';
+    if ((db.features || []).some(function (f) { return TS.util.norm(f.name) === norm; })) return 'feature';
+    if ((db.stores || []).some(function (s) { return TS.util.norm(s.area) === norm; })) return 'area';
+    if ((db.stores || []).some(function (s) { return TS.util.norm(s.station) === norm; })) return 'station';
+    if ((db.stores || []).some(function (s) { return TS.util.norm(s.storeType) === norm; })) return 'type';
+    return null;
+  }
+})();
+</script>
+</body>
+</html>

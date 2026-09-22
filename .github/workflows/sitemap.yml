@@ -1,0 +1,42 @@
+# sitemap.xml の自動更新（追加改修⑥-(a)・2026-09-22）
+# 週1回、公開スプレッドシートの店舗一覧から sitemap.xml を作り直し、内容が変わったときだけコミットする。
+# 手動で今すぐ更新したいときは Actions タブ → この workflow → Run workflow（workflow_dispatch）。
+name: Update sitemap.xml
+
+on:
+  schedule:
+    # 毎週月曜 03:00 JST（= 日曜 18:00 UTC）。GitHub の cron は UTC 固定のため換算して書く。
+    - cron: '0 18 * * 0'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sitemap
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Generate sitemap.xml
+        run: node tools/gen_sitemap.mjs
+
+      - name: Commit if changed
+        run: |
+          if git diff --quiet -- sitemap.xml; then
+            echo "変更なし（店舗の増減なし）"
+            exit 0
+          fi
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add sitemap.xml
+          git commit -m "chore(sitemap): 店舗一覧の変更を反映（自動生成）"
+          git push

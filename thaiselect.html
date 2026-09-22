@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta name="robots" content="noindex, nofollow"> <!-- staging only -->
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title id="page-title">Thai SELECTとは？｜THAI SPOT TOKYO</title>
+<meta name="description" id="page-description" content="タイ国政府商務省が認定する「Thai SELECT」について、THAI SPOT TOKYOでのご案内です。">
+<link rel="canonical" href="https://thaispot-tokyo.com/thaiselect.html">
+<!-- SNS共有カード(OGP/Twitter)。画像はサイト共通 assets/img/ogp.jpg・URLは絶対指定(改修6-(b)) -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="THAI SPOT TOKYO">
+<meta property="og:locale" content="ja_JP">
+<meta property="og:title" content="Thai SELECTとは？｜THAI SPOT TOKYO">
+<meta property="og:description" content="タイ国政府商務省が認定する「Thai SELECT」について、THAI SPOT TOKYOでのご案内です。">
+<meta property="og:url" content="https://thaispot-tokyo.com/thaiselect.html">
+<meta property="og:image" content="https://thaispot-tokyo.com/assets/img/ogp.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="assets/css/style.css?v=20260826a">
+<!-- GA4(改修6-(f))。config.js の STAGING_MODE:true のときは ga.js が何もしない。
+     defer なので本文末尾の config.js が評価された後に実行される(読み込み順の規約どおり)。 -->
+<script defer src="assets/js/ga.js?v=20260922a"></script>
+</head>
+<body>
+
+<div id="site-header"></div>
+
+<main id="main-content">
+  <div class="container">
+    <!-- シート設定に問題がある可能性があるときだけ表示(実装設計書13-H-12。search.html等と同一の慣例) -->
+    <div id="warnings-banner-mount"></div>
+
+    <div class="article">
+      <h1 class="article__title" id="article-title">Thai SELECTとは？</h1>
+      <p class="article__body" id="article-body"></p>
+      <p id="article-cta"></p>
+    </div>
+  </div>
+</main>
+
+<div id="site-footer"></div>
+
+<!-- 要件2-2「文言層は無停止」: 本文はSite_Texts駆動だが、通信失敗時（現状gvizが401等）でも
+     texts-default.jsの組み込み文言でページとして完全に成立させる（白画面・空欄禁止）。
+     広告枠なし（要件1章6番：Thai SELECTとは？ページに広告枠の割当なし）。
+     動的テキストは全てTS.util.setText()（textContent代入）経由。href は自前組み立て文字列を直接代入する
+     （実装設計書10-1規約: 内部相対リンクはel()のattrsに入れずに直接代入）。 -->
+<script src="assets/js/config.js?v=20260922a"></script>
+<script src="assets/js/texts-default.js?v=20260922a"></script>
+<script src="assets/js/util.js?v=20260922a"></script>
+<script src="assets/js/data.js?v=20260826a"></script>
+<script src="assets/js/render.js?v=20260826a"></script>
+<script>
+(function () {
+  'use strict';
+
+  var U = TS.util;
+
+  TS.render.chrome('thaiselect'); // ヘッダー/フッター骨格を先に描画(体感速度優先)
+
+  // texts-defaultを直接使う即時描画(データ取得前・取得失敗時の両方に効く共通関数)
+  function applyTexts(texts) {
+    document.title = texts('meta_title_thaiselect') || document.title;
+    var descMeta = document.getElementById('page-description');
+    if (descMeta) descMeta.setAttribute('content', texts('meta_desc_thaiselect'));
+
+    U.setText('article-title', texts('thaiselect_title'));
+    U.setText('article-body', texts('thaiselect_body'));
+
+    renderCta(texts('thaiselect_cta_label'));
+  }
+
+  // CTAボタン: 「Thai SELECT認定店を見る」→ search.html?feature=Thai SELECT認定（実マスタ値・要件5章/検索仕様）
+  function renderCta(label) {
+    var mount = document.getElementById('article-cta');
+    mount.textContent = '';
+    if (!label) return;
+    var a = U.el('a', { class: 'btn btn--primary' }, [label]);
+    a.href = 'search.html?feature=' + encodeURIComponent('Thai SELECT認定'); // 自前組み立て文字列は直接代入(設計書10-1)
+    mount.appendChild(a);
+  }
+
+  // 要件2-2の趣旨: まずtexts-defaultの組み込み文言で即時描画する(体感速度・無停止の両立)。
+  // Site_Textsに発注者の更新があれば、db.load()解決後に上書きする。
+  applyTexts(function (key) { return (TS.textsDefault && TS.textsDefault[key]) || ''; });
+
+  TS.data.load().then(function (db) {
+    TS.render.footerNotices(db);
+    insertWarningsBanner(db);
+    applyTexts(db.texts);
+  }).catch(function (err) {
+    // 本文は既にtexts-defaultで表示済みなので致命的エラーにはしない(要件2-2「文言層は無停止」)。
+    // フッターの「お知らせ・特集」欄のみ空のまま(致命的ではない)。
+    if (typeof console !== 'undefined') console.error('[thaiselect.html] データ取得に失敗(texts-defaultで続行):', err);
+  });
+
+  // シート設定に問題がある可能性があるときだけ小バナーを先頭に挿入(実装設計書13-H-12)
+  function insertWarningsBanner(db) {
+    if (typeof TS.render.warningsBanner !== 'function') return;
+    var banner = TS.render.warningsBanner(db);
+    if (!banner) return;
+    var mount = document.getElementById('warnings-banner-mount');
+    if (mount) mount.appendChild(banner);
+  }
+})();
+</script>
+</body>
+</html>

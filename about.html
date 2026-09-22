@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta name="robots" content="noindex, nofollow"> <!-- staging only -->
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title id="page-title">THAI SPOT TOKYOについて｜THAI SPOT TOKYO</title>
+<meta name="description" id="page-description" content="THAI SPOT TOKYOの運営方針・掲載についてのご案内です。">
+<link rel="canonical" href="https://thaispot-tokyo.com/about.html">
+<!-- SNS共有カード(OGP/Twitter)。画像はサイト共通 assets/img/ogp.jpg・URLは絶対指定(改修6-(b)) -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="THAI SPOT TOKYO">
+<meta property="og:locale" content="ja_JP">
+<meta property="og:title" content="THAI SPOT TOKYOについて｜THAI SPOT TOKYO">
+<meta property="og:description" content="THAI SPOT TOKYOの運営方針・掲載についてのご案内です。">
+<meta property="og:url" content="https://thaispot-tokyo.com/about.html">
+<meta property="og:image" content="https://thaispot-tokyo.com/assets/img/ogp.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="assets/css/style.css?v=20260826a">
+<!-- GA4(改修6-(f))。config.js の STAGING_MODE:true のときは ga.js が何もしない。
+     defer なので本文末尾の config.js が評価された後に実行される(読み込み順の規約どおり)。 -->
+<script defer src="assets/js/ga.js?v=20260922a"></script>
+</head>
+<body>
+
+<div id="site-header"></div>
+
+<main id="main-content">
+  <div class="container">
+    <!-- シート設定に問題がある可能性があるときだけ表示(実装設計書13-H-12。search.html等と同一の慣例) -->
+    <div id="warnings-banner-mount"></div>
+
+    <div class="article">
+      <h1 class="article__title" id="article-title">THAI SPOT TOKYOについて</h1>
+      <p class="article__body" id="article-body"></p>
+      <p id="article-cta"></p>
+    </div>
+  </div>
+</main>
+
+<div id="site-footer"></div>
+
+<!-- 要件2-2「文言層は無停止」: 本文はSite_Texts駆動だが、通信失敗時でもtexts-default.jsの組み込み文言で
+     ページとして完全に成立させる(白画面・空欄禁止)。広告枠なし(要件1章7番)。
+     動的テキストは全てTS.util.setText()(textContent代入)経由。 -->
+<script src="assets/js/config.js?v=20260922a"></script>
+<script src="assets/js/texts-default.js?v=20260922a"></script>
+<script src="assets/js/util.js?v=20260922a"></script>
+<script src="assets/js/data.js?v=20260826a"></script>
+<script src="assets/js/render.js?v=20260826a"></script>
+<script>
+(function () {
+  'use strict';
+
+  var U = TS.util;
+
+  TS.render.chrome('about');
+
+  function applyTexts(texts) {
+    document.title = texts('meta_title_about') || document.title;
+    var descMeta = document.getElementById('page-description');
+    if (descMeta) descMeta.setAttribute('content', texts('meta_desc_about'));
+
+    U.setText('article-title', texts('about_title'));
+    U.setText('article-body', texts('about_body'));
+
+    renderCta(texts('about_cta_label'));
+  }
+
+  // CTAボタン: 「お店を探してみる」→ search.html（条件未適用・仕様書3-7の導線）
+  function renderCta(label) {
+    var mount = document.getElementById('article-cta');
+    mount.textContent = '';
+    if (!label) return;
+    var a = U.el('a', { class: 'btn btn--primary' }, [label]);
+    a.href = 'search.html'; // 自前組み立て文字列は直接代入(設計書10-1)
+    mount.appendChild(a);
+  }
+
+  applyTexts(function (key) { return (TS.textsDefault && TS.textsDefault[key]) || ''; });
+
+  TS.data.load().then(function (db) {
+    TS.render.footerNotices(db);
+    insertWarningsBanner(db);
+    applyTexts(db.texts);
+  }).catch(function (err) {
+    if (typeof console !== 'undefined') console.error('[about.html] データ取得に失敗(texts-defaultで続行):', err);
+  });
+
+  // シート設定に問題がある可能性があるときだけ小バナーを先頭に挿入(実装設計書13-H-12)
+  function insertWarningsBanner(db) {
+    if (typeof TS.render.warningsBanner !== 'function') return;
+    var banner = TS.render.warningsBanner(db);
+    if (!banner) return;
+    var mount = document.getElementById('warnings-banner-mount');
+    if (mount) mount.appendChild(banner);
+  }
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta name="robots" content="noindex, nofollow"> <!-- staging only -->
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>お問い合わせ｜THAI SPOT TOKYO</title>
+<meta name="description" content="掲載に関するご連絡・お問い合わせはこちらから。">
+<link rel="canonical" href="https://thaispot-tokyo.com/contact.html">
+<!-- SNS共有カード(OGP/Twitter)。画像はサイト共通 assets/img/ogp.jpg・URLは絶対指定(改修6-(b)) -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="THAI SPOT TOKYO">
+<meta property="og:locale" content="ja_JP">
+<meta property="og:title" content="お問い合わせ｜THAI SPOT TOKYO">
+<meta property="og:description" content="掲載に関するご連絡・お問い合わせはこちらから。">
+<meta property="og:url" content="https://thaispot-tokyo.com/contact.html">
+<meta property="og:image" content="https://thaispot-tokyo.com/assets/img/ogp.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="assets/css/style.css?v=20260826a">
+<!-- GA4(改修6-(f))。config.js の STAGING_MODE:true のときは ga.js が何もしない。
+     defer なので本文末尾の config.js が評価された後に実行される(読み込み順の規約どおり)。 -->
+<script defer src="assets/js/ga.js?v=20260922a"></script>
+</head>
+<body>
+
+<div id="site-header"></div>
+
+<main id="main-content">
+  <div class="container">
+
+    <!-- シート設定に問題がある可能性があるときだけ表示(実装設計書13-I-10)。TS.render.warningsBannerは
+         担当Hが並行実装中のため、呼び出し側は typeof ガード付きで独立動作させる(未実装でも本ページは壊れない)。 -->
+    <div id="warnings-banner-mount"></div>
+
+    <div class="article">
+      <h1 class="article__title" id="contact-title">お問い合わせ</h1>
+      <p id="contact-lead"></p>
+
+      <!-- フォーム本体はJSで構築する(項目・種別5択・完了/失敗文言がSite_Texts駆動のため・要件7章)。
+           データ確定まで簡易な読み込み中表示のみ。 -->
+      <div id="contact-mount">
+        <p class="state-panel__desc">読み込み中…</p>
+      </div>
+
+      <!-- 送信結果表示(成功=完了文言/失敗=再試行案内) -->
+      <div id="contact-result" hidden></div>
+    </div>
+  </div>
+</main>
+
+<div id="site-footer"></div>
+
+<!-- 広告枠なし(要件1章9番)。項目・種別5択・完了文言は仕様書3-9どおりtexts()経由で構築する。
+     動的テキストは全てTS.util.el()のtextContent/value代入。href/src相当の外部送信は行わない
+     (POST送信のみ・TS.log.contact)。 -->
+<script src="assets/js/config.js?v=20260922a"></script>
+<script src="assets/js/texts-default.js?v=20260922a"></script>
+<script src="assets/js/util.js?v=20260922a"></script>
+<script src="assets/js/data.js?v=20260826a"></script>
+<script src="assets/js/render.js?v=20260826a"></script>
+<script src="assets/js/log.js?v=20260826a"></script>
+<script>
+(function () {
+  'use strict';
+
+  var U = TS.util;
+  var storeParam = U.qs('store'); // ?store=店舗名 事前入力(store.htmlの「掲載情報の修正を連絡する」から遷移時)
+
+  TS.render.chrome('contact');
+
+  TS.data.load().then(function (db) {
+    TS.render.footerNotices(db);
+    insertWarningsBanner(db);
+    buildPage(db.texts);
+  }).catch(function (err) {
+    // 要件2-2「文言層は無停止」の趣旨: お問い合わせフォーム自体はスプシの店舗データに依存せず動作できる
+    // 機能なので、データ取得に失敗してもtexts-defaultへ完全フォールバックしてフォームは表示する
+    // (致命的エラー扱いにしない=白画面よりも「送信できる状態を保つ」ことを優先)。
+    if (typeof console !== 'undefined') console.error('[contact.html] データ取得に失敗(texts-defaultで続行):', err);
+    buildPage(function (key) { return (TS.textsDefault && TS.textsDefault[key]) || ''; });
+  });
+
+  // シート設定に問題がある可能性がある時だけ警告バナーを先頭に挿入する(実装設計書13-I-10)。
+  // TS.render.warningsBannerは担当Hが並行実装中の関数のため、typeofガードを必須にして独立動作させる
+  // (未実装の間は何もしない=本ページの他機能に影響しない)。データ取得失敗時(catch側)はdb自体が無いため呼ばない。
+  function insertWarningsBanner(db) {
+    if (typeof TS.render.warningsBanner !== 'function') return;
+    var banner = TS.render.warningsBanner(db);
+    if (!banner) return;
+    var mount = document.getElementById('warnings-banner-mount');
+    if (mount) mount.appendChild(banner);
+  }
+
+  function buildPage(texts) {
+    U.setText('contact-title', texts('contact_heading'));
+    U.setText('contact-lead', texts('contact_lead'));
+    buildForm(texts);
+  }
+
+  // ---- フォーム構築(要件7章・仕様書3-9)。項目・ラベル・種別選択肢は全てtexts()経由(Site_Texts駆動) ----
+  function buildForm(texts) {
+    var mount = document.getElementById('contact-mount');
+    mount.textContent = '';
+
+    var form = U.el('form', { novalidate: 'novalidate' });
+
+    // お名前
+    var nameField = fieldWrap(texts('contact_name_label'), true);
+    var nameInput = U.el('input', {
+      class: 'form-input', type: 'text', id: 'f-name', name: 'name', maxlength: '60',
+      placeholder: 'お名前をご入力ください'
+    });
+    nameField.appendChild(nameInput);
+    nameField.appendChild(U.el('p', { class: 'form-error', id: 'err-name' }, []));
+    form.appendChild(nameField);
+
+    // メールアドレス
+    var emailField = fieldWrap(texts('contact_email_label'), true);
+    var emailInput = U.el('input', {
+      class: 'form-input', type: 'email', id: 'f-email', name: 'email', maxlength: '120',
+      placeholder: '返信可能なメールアドレスをご入力ください'
+    });
+    emailField.appendChild(emailInput);
+    emailField.appendChild(U.el('p', { class: 'form-error', id: 'err-email' }, []));
+    form.appendChild(emailField);
+
+    // お問い合わせ種別(5択・仕様書3-9)。texts('contact_types')をカンマ区切りで展開(Site_Texts駆動)
+    var typeField = fieldWrap(texts('contact_type_label'), true);
+    var typeGroup = U.el('div', { class: 'form-radio-group' });
+    var typeOptions = (texts('contact_types') || '').split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+    typeOptions.forEach(function (opt, i) {
+      var id = 'f-type-' + i;
+      var item = U.el('label', { class: 'form-radio-item', for: id });
+      var radio = U.el('input', { type: 'radio', id: id, name: 'type', value: opt });
+      item.appendChild(radio);
+      item.appendChild(document.createTextNode(opt)); // ラベル文字列はtextノードとして追加(innerHTML不使用)
+      typeGroup.appendChild(item);
+    });
+    typeField.appendChild(typeGroup);
+    typeField.appendChild(U.el('p', { class: 'form-error', id: 'err-type' }, []));
+    form.appendChild(typeField);
+
+    // 店舗名(店舗に関するお問い合わせの場合・任意。?storeパラメータで事前入力)
+    var storeField = fieldWrap(texts('contact_store_label'), false);
+    var storeInput = U.el('input', {
+      class: 'form-input', type: 'text', id: 'f-store', name: 'store', maxlength: '80',
+      placeholder: '店舗名をご入力ください'
+    });
+    storeInput.value = storeParam || ''; // value代入(textとして安全・innerHTML不使用)
+    storeField.appendChild(storeInput);
+    form.appendChild(storeField);
+
+    // お問い合わせ内容
+    var msgField = fieldWrap(texts('contact_message_label'), true);
+    var msgInput = U.el('textarea', {
+      class: 'form-textarea', id: 'f-message', name: 'message', maxlength: '2000',
+      placeholder: 'お問い合わせ内容をご入力ください'
+    });
+    msgField.appendChild(msgInput);
+    msgField.appendChild(U.el('p', { class: 'form-error', id: 'err-message' }, []));
+    form.appendChild(msgField);
+
+    // ハニーポット(要件7章: CSS不可視。GAS側はbody.websiteで判定・payloadに含めて送る)
+    var honeypot = U.el('div', { class: 'form-field form-honeypot', 'aria-hidden': 'true' });
+    var hpLabel = U.el('label', { for: 'f-website' }, ['Website']);
+    var hpInput = U.el('input', { type: 'text', id: 'f-website', name: 'website', tabindex: '-1', autocomplete: 'off' });
+    honeypot.appendChild(hpLabel);
+    honeypot.appendChild(hpInput);
+    form.appendChild(honeypot);
+
+    // 送信ボタン(送信中disabled=二重送信防止)
+    var submitBtn = U.el('button', { class: 'btn btn--primary', type: 'submit', id: 'f-submit' }, [texts('contact_submit')]);
+    form.appendChild(submitBtn);
+
+    form.addEventListener('submit', function (ev) {
+      ev.preventDefault();
+      handleSubmit(form, texts, submitBtn, nameInput, emailInput, msgInput);
+    });
+
+    mount.appendChild(form);
+  }
+
+  function fieldWrap(labelText, required) {
+    var wrap = U.el('div', { class: 'form-field' });
+    var label = U.el('label', { class: 'form-label' }, [labelText]);
+    if (required) label.appendChild(U.el('span', { class: 'required' }, ['必須']));
+    wrap.appendChild(label);
+    return wrap;
+  }
+
+  // ---- クライアント側必須チェック(日本語エラー・要件) ----
+  function validate(form, nameInput, emailInput, msgInput) {
+    var ok = true;
+    setError('err-name', '');
+    setError('err-email', '');
+    setError('err-type', '');
+    setError('err-message', '');
+
+    if (!nameInput.value.trim()) { setError('err-name', 'お名前を入力してください。'); ok = false; }
+
+    var email = emailInput.value.trim();
+    if (!email) { setError('err-email', 'メールアドレスを入力してください。'); ok = false; }
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setError('err-email', 'メールアドレスの形式が正しくありません。'); ok = false; }
+
+    var typeChecked = form.querySelector('input[name="type"]:checked');
+    if (!typeChecked) { setError('err-type', 'お問い合わせ種別を選択してください。'); ok = false; }
+
+    if (!msgInput.value.trim()) { setError('err-message', 'お問い合わせ内容を入力してください。'); ok = false; }
+
+    return ok;
+  }
+
+  function setError(id, msg) {
+    var el = document.getElementById(id);
+    if (el) el.textContent = msg || '';
+  }
+
+  function handleSubmit(form, texts, submitBtn, nameInput, emailInput, msgInput) {
+    if (submitBtn.disabled) return; // 送信中の再発火防止(Enterキー連打等への保険)
+    if (!validate(form, nameInput, emailInput, msgInput)) return;
+
+    var typeInput = form.querySelector('input[name="type"]:checked');
+    var storeInput = form.querySelector('#f-store');
+    var hpInput = form.querySelector('#f-website');
+
+    var payload = {
+      name: nameInput.value.trim(),
+      email: emailInput.value.trim(),
+      type: typeInput ? typeInput.value : '',
+      store: storeInput ? storeInput.value.trim() : '',
+      message: msgInput.value.trim(),
+      website: hpInput ? hpInput.value : '' // ハニーポット(通常は空)
+    };
+
+    submitBtn.disabled = true; // 二重送信防止
+    submitBtn.textContent = texts('contact_sending');
+
+    TS.log.contact(payload).then(function (res) {
+      if (res && res.ok) {
+        showResult('success', texts('contact_success'));
+        form.hidden = true; // 完了後は再送信させない(仕様: 成功時は完了文言表示)
+      } else {
+        submitBtn.disabled = false;
+        submitBtn.textContent = texts('contact_submit');
+        showResult('error', resolveErrorMessage(res && res.reason, texts));
+      }
+    });
+  }
+
+  // reason=busyなら「混み合っています」系(要件7章のレート制限・GAS側 reason:'busy')。
+  // reason=gas_unset は本番前(Wave3で実値化前)の開発用表示(設計書4章: GAS_URL未設定時は静かにスキップ仕様のため
+  // ここではユーザー向けに分かりやすい開発中メッセージへ読み替える)。
+  function resolveErrorMessage(reason, texts) {
+    if (reason === 'busy') return '混み合っています。しばらく時間をおいて再度お試しください。';
+    if (reason === 'gas_unset') return '送信先が未設定です（開発中のため、現時点では送信できません）。';
+    return texts('contact_error');
+  }
+
+  function showResult(kind, message) {
+    var box = document.getElementById('contact-result');
+    box.textContent = '';
+    box.hidden = false;
+    box.appendChild(U.el('p', { class: kind === 'success' ? 'form-success' : 'form-error' }, [message]));
+  }
+})();
+</script>
+</body>
+</html>

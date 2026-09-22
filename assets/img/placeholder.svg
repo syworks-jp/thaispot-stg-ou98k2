@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" role="img" aria-label="店舗写真は準備中です">
+  <rect width="400" height="300" fill="#f5f1ea"/>
+  <rect x="10" y="10" width="380" height="280" rx="18" fill="none" stroke="#eee3cd" stroke-width="2"/>
+
+  <!-- フォーク(左)・スプーン(右)の簡素な線画 -->
+  <g stroke="#c9a35f" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <!-- フォーク -->
+    <line x1="163" y1="222" x2="163" y2="128"/>
+    <line x1="148" y1="120" x2="148" y2="86"/>
+    <line x1="163" y1="120" x2="163" y2="80"/>
+    <line x1="178" y1="120" x2="178" y2="86"/>
+    <path d="M148 118 Q163 134 178 118 L178 122 Q163 138 148 122 Z" fill="#c9a35f" stroke="none"/>
+
+    <!-- スプーン -->
+    <line x1="243" y1="222" x2="243" y2="142"/>
+    <ellipse cx="243" cy="106" rx="21" ry="29"/>
+  </g>
+
+  <circle cx="200" cy="150" r="86" fill="none" stroke="#eadfc6" stroke-width="1.5" stroke-dasharray="3 5"/>
+
+  <text x="200" y="262" text-anchor="middle" font-family="Georgia, 'Yu Mincho', 'Hiragino Mincho ProN', serif" font-size="15" fill="#a83226" letter-spacing="1">THAI SPOT TOKYO</text>
+  <text x="200" y="280" text-anchor="middle" font-family="'Hiragino Sans','Yu Gothic UI',sans-serif" font-size="11" fill="#8a8378">Photo Coming Soon</text>
+</svg>
