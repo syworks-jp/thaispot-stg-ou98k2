@@ -1,6 +1,6 @@
 /*
  * THAI SPOT TOKYO — 全ページ共通デザインシステム
- * 作成: タチコマ(Wave1-B)。配色・書体・部品は「デザイン案_CD統合_v1.html」(発注者確定デザイン)を正とする。
+ * 配色・書体・部品は「デザイン案_CD統合_v1.html」(発注者確定デザイン)を正とする。
  * 構成の参考: demo/index.html(発注者高評価のデモ)。ただし配色はCD統合案(赤・金黄・クリーム)のみを使用し、
  * demoの緑系配色(--thai-green等)は採用しない(要件定義書8章: 配色はCD統合案が正)。
  * 375px基準モバイルファースト。768px+でコンテナ幅・2カラム化などを調整(実装設計書2章)。
@@ -89,7 +89,7 @@ button:disabled {
 
   /* ヒーロー背景(実写真が無い場合の代替グラデーション。デザイン案のfoodmark演出に対応) */
   --hero-gradient: radial-gradient(120% 90% at 20% 15%, #e8a13c 0%, #cf5f2e 34%, #a83226 62%, #7a1f1c 100%);
-  /* 明るい料理写真でも文字が読めるよう全体を濃いめに・文字が乗る下部は特に濃く(8/25課長指摘対応) */
+  /* 明るい料理写真でも文字が読めるよう全体を濃いめに・文字が乗る下部は特に濃く(8/25対応) */
   --hero-overlay: linear-gradient(180deg, rgba(25, 9, 7, .32) 0%, rgba(25, 9, 7, .18) 35%, rgba(25, 9, 7, .78) 100%);
 
   /* 書体 */
@@ -298,7 +298,7 @@ main {
   margin: 0 auto;
   display: flex;
   flex-wrap: wrap;
-  justify-content: center; /* モバイルは中央寄せ(2026-08-25 課長iPhone実機フィードバック) */
+  justify-content: center; /* モバイルは中央寄せ(2026-08-25 iPhone実機確認) */
   text-align: center;
   gap: var(--space-2) var(--space-4);
   font-size: 13px;
@@ -391,7 +391,7 @@ main {
   letter-spacing: .24em;
   color: var(--color-gold-light);
   font-weight: 700;
-  /* 白飯・卵など明るい背景でも沈まない三重影(8/25課長指摘対応) */
+  /* 白飯・卵など明るい背景でも沈まない三重影(8/25対応) */
   text-shadow: 0 0 5px rgba(0, 0, 0, .65), 0 1px 3px rgba(0, 0, 0, .8), 0 2px 12px rgba(0, 0, 0, .55);
 }
 
@@ -675,7 +675,7 @@ a.store-card:hover {
   border-color: var(--color-primary);
 }
 .explore-tile__icon {
-  /* 8/25課長要望: 絵文字→自前SVGラインアイコン(端末差ゼロ・配色統一)。金黄の薄地円に深赤ストローク */
+  /* 8/25: 絵文字から自前SVGラインアイコン(端末差ゼロ・配色統一)。金黄の薄地円に深赤ストローク */
   width: 46px;
   height: 46px;
   display: grid;

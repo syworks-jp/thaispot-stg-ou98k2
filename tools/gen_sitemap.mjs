@@ -82,6 +82,8 @@ export function parseStoreIdsFromGviz(obj) {
   const idCol = index['Store_ID'];
   const pubCol = index['Published'];
   if (idCol == null) throw new Error('Storesシートに Store_ID 列が見つかりません');
+  // Published 列が無い時は公開・非公開を判定できないので中断する（サイト側 data.js は全件非公開扱い＝0件表示になるため、sitemap だけ全件載せる食い違いを防ぐ）。
+  if (pubCol == null) throw new Error('Storesシートに Published 列が見つかりません（公開・非公開を判定できないため中断）');
 
   const seen = new Set();
   const ids = [];

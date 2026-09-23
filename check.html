@@ -281,7 +281,7 @@
     el.appendChild(TS.util.el('span', { class: 'check-summary__ng' }, ['×' + ng]));
   }
 
-  // ---- 日時表示(JST。要件: 課長運用に合わせ常にJSTで) ----
+  // ---- 日時表示(JST。運用に合わせ常にJSTで) ----
   function formatJst(date) {
     try {
       return new Intl.DateTimeFormat('ja-JP', {
